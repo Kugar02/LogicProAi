@@ -61,7 +61,6 @@
             gap: 16px;
         }
 
-        /* 莊閒和直接輸入面板 */
         .direct-input-container {
             display: flex;
             flex-direction: column;
@@ -171,7 +170,7 @@
             grid-template-rows: repeat(6, auto);
             grid-auto-flow: column;
             grid-auto-columns: minmax(50px, auto);
-            gap: 6px;
+            gap: 8px;
             min-height: 120px;
             padding: 12px;
             background-color: rgba(0, 0, 0, 0.3);
@@ -181,18 +180,38 @@
             align-content: start;
         }
 
+        /* 修正為圓形 */
         .badge-box {
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 8px;
-            border-radius: 6px;
+            border-radius: 50%;
             color: white;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             font-weight: bold;
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            width: 45px;
+            height: 45px;
             min-width: 45px;
-            min-height: 40px;
+            position: relative; /* 為了定位對錯小圖示 */
+        }
+
+        /* 預測對錯圖示 */
+        .pred-icon {
+            position: absolute;
+            bottom: -3px;
+            right: -3px;
+            font-size: 0.7rem;
+            background: white;
+            border-radius: 50%;
+            padding: 1px;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            line-height: 1;
         }
 
         .badge-box-B { background-color: var(--banker-color); }
@@ -313,11 +332,10 @@
 
     <header>
         <h1>百家樂多維路單分析與旗艦預測系統</h1>
-        <p>8 大路單分析核心 (純賽果快速錄入版)</p>
+        <p>6 大路單分析核心 (純賽果快速錄入版)</p>
     </header>
 
     <div class="control-panel">
-        <!-- 莊閒和直接點擊錄入區 -->
         <div class="direct-input-container">
             <span class="direct-title">點擊下方按鈕直接記錄當局開牌結果</span>
             <div class="btn-input-group">
@@ -355,12 +373,12 @@
         </div>
 
         <div class="analysis-grid" id="analysisGrid">
-            <!-- 由 JS 動態生成 8 大路單核心卡片 -->
+            <!-- 由 JS 動態生成 6 大路單核心卡片 -->
         </div>
     </div>
 
     <div class="stats-panel-bottom">
-        <div class="stats-panel-title">實戰預測戰績與統計（歷史綜合模擬）</div>
+        <div class="stats-panel-title">實戰預測戰績與統計（依照系統最終預測建議）</div>
         <div class="stats-grid">
             <div class="stat-card">
                 <span class="stat-label">預測勝率 (%)</span>
@@ -386,7 +404,6 @@
     </div>
 
     <script>
-        // 全局狀態：儲存每局結果 ('B', 'P', 'T')
         let baccaratHistory = [];
 
         function recordResult(result) {
@@ -426,7 +443,6 @@
                 if (t === 'B' || t === 'P' || t === 'T') {
                     parsed.push(t);
                 } else {
-                    // 支援無逗號黏在一起的字串，例如 "BPBBPT"
                     for (let char of t) {
                         if (char === 'B' || char === 'P' || char === 'T') {
                             parsed.push(char);
@@ -586,48 +602,23 @@
             return { name: roadName, target: 'NEUTRAL', confidence: 50, reason: `預測開${colorName}，但莊閒試算對稱，無明確指向` };
         }
 
+        // --- 修正後的 盤珠路 3x3 比例邏輯 ---
         function analyzeNineGridBeadRoad(pureHistory) {
-            let n = pureHistory.length;
-            let curBlockLen = n % 9;
-            let nextPos = curBlockLen + 1;
-            let currentBlock = curBlockLen === 0 ? [] : pureHistory.slice(n - curBlockLen);
-            let bCount = currentBlock.filter(x => x === 'B').length;
-            let pCount = currentBlock.filter(x => x === 'P').length;
+            // 取得最近 9 局作為 3x3 視窗
+            let last9 = pureHistory.slice(-9);
+            let bCount = last9.filter(x => x === 'B').length;
+            let pCount = last9.filter(x => x === 'P').length;
+            let conf = 80; // 預設可信度
 
-            if (nextPos === 1) {
-                let last9 = pureHistory.slice(Math.max(0, n - 9));
-                let target = last9.filter(x => x === 'B').length >= last9.filter(x => x === 'P').length ? 'B' : 'P';
-                return { name: '盤珠路 (九宮格)', target, confidence: 74, reason: `全新 3×3 陣列，承接前陣【${target === 'B' ? '莊' : '閒'}】主導勢位` };
-            } else if (nextPos === 5) {
-                let pos1 = currentBlock[0];
-                return { name: '盤珠路 (九宮格)', target: pos1, confidence: 82, reason: `進入【中宮樞紐】，對應首位 (${pos1 === 'B' ? '莊' : '閒'}) 觸發對角線` };
+            // 判斷 4:1, 6:2, 5:3 莊閒比例
+            if ((bCount === 4 && pCount === 1) || (bCount === 6 && pCount === 2) || (bCount === 5 && pCount === 3)) {
+                return { name: '盤珠路 (3x3比例)', target: 'B', confidence: conf, reason: `近期區塊內觸發 ${bCount}莊:${pCount}閒 比例，順勢推薦莊` };
             }
-            let target = bCount >= pCount ? 'P' : 'B';
-            return { name: '盤珠路 (九宮格)', target, confidence: 76, reason: `九宮格第 ${nextPos} 位：依照當前陰陽比 (${bCount}莊 / ${pCount}閒) 補齊` };
-        }
-
-        function analyzeSingleShot(pureHistory) {
-            let matrix = buildRoadMatrix(pureHistory);
-            let numCols = matrix.length;
-            let colLens = matrix.map(c => c.length);
-            let lastItem = pureHistory[pureHistory.length - 1];
-            let oppItem = lastItem === 'B' ? 'P' : 'B';
-            let curLen = colLens[numCols - 1];
-
-            if (curLen >= 5) return { name: '單口打法', target: lastItem, confidence: 90, reason: `觸發【長龍續跟】(${curLen}連龍)，高期望切入` };
-            if (numCols >= 4 && colLens.slice(-4).every(l => l === 1)) return { name: '單口打法', target: oppItem, confidence: 88, reason: `觸發【極致單跳】(4連單跳)，高期望切換` };
-            if (numCols >= 3 && colLens.slice(-3).every(l => l === 2)) return { name: '單口打法', target: oppItem, confidence: 86, reason: `觸發【標準雙跳轉向】(2-2-2齊腳)，高期望轉向` };
-
-            return { name: '單口打法', target: 'NEUTRAL', confidence: 50, reason: '未達極致高勝率單口切入條件，選擇規避' };
-        }
-
-        function analyzeFourBeadYinYang(pureHistory) {
-            let curLen = pureHistory.length % 4;
-            let lastBead = pureHistory[pureHistory.length - 1];
-            if (curLen === 0) return { name: '四珠兩儀', target: lastBead, confidence: 72, reason: '四珠列滿，隨首珠兩儀對應預測新列' };
-            if (curLen === 1) return { name: '四珠兩儀', target: lastBead, confidence: 75, reason: '四珠列第 2 珠：遵循「兩儀同氣」補齊雙連' };
-            let target = lastBead === 'B' ? 'P' : 'B';
-            return { name: '四珠兩儀', target, confidence: 78, reason: '四珠列中後段：依據「陰陽交替」切換預測' };
+            if ((pCount === 4 && bCount === 1) || (pCount === 6 && bCount === 2) || (pCount === 5 && bCount === 3)) {
+                return { name: '盤珠路 (3x3比例)', target: 'P', confidence: conf, reason: `近期區塊內觸發 ${pCount}閒:${bCount}莊 比例，順勢推薦閒` };
+            }
+            
+            return { name: '盤珠路 (3x3比例)', target: 'NEUTRAL', confidence: 50, reason: `當前 3x3 區塊比例 (${bCount}莊:${pCount}閒) 未達典型觸發門檻` };
         }
 
         function analyzeThreeBeadRoad(pureHistory) {
@@ -638,6 +629,7 @@
             return { name: '三珠路正反雙式', target, confidence: 82, reason: '三珠列第 3 珠：預測齊腳尾號' };
         }
 
+        // 修改為 6 大核心 (刪除單口打法、四珠兩儀)
         function getCoresAnalysis(pureHistory) {
             if (pureHistory.length < 10) {
                 let needed = 10 - pureHistory.length;
@@ -648,9 +640,7 @@
                     { name: '下三路 (大眼仔)', target: 'NEUTRAL', confidence: 50, reason: reasonStr },
                     { name: '下三路 (小路)', target: 'NEUTRAL', confidence: 50, reason: reasonStr },
                     { name: '下三路 (曱甴路)', target: 'NEUTRAL', confidence: 50, reason: reasonStr },
-                    { name: '盤珠路 (九宮格)', target: 'NEUTRAL', confidence: 50, reason: reasonStr },
-                    { name: '單口打法', target: 'NEUTRAL', confidence: 50, reason: reasonStr },
-                    { name: '四珠兩儀', target: 'NEUTRAL', confidence: 50, reason: reasonStr },
+                    { name: '盤珠路 (3x3比例)', target: 'NEUTRAL', confidence: 50, reason: reasonStr },
                     { name: '三珠路正反雙式', target: 'NEUTRAL', confidence: 50, reason: reasonStr }
                 ];
             }
@@ -661,14 +651,27 @@
                 analyzeDownThreeRoads(pureHistory, 2, '下三路 (小路)'),
                 analyzeDownThreeRoads(pureHistory, 3, '下三路 (曱甴路)'),
                 analyzeNineGridBeadRoad(pureHistory),
-                analyzeSingleShot(pureHistory),
-                analyzeFourBeadYinYang(pureHistory),
                 analyzeThreeBeadRoad(pureHistory)
             ];
         }
 
+        // 獨立出最終加權預測邏輯，供歷史統計與 UI 顯示共同使用
+        function getFinalPrediction(pureHistory) {
+            if (pureHistory.length < 10) return null;
+            let cores = getCoresAnalysis(pureHistory);
+            let bScore = 0, pScore = 0, bVotes = 0, pVotes = 0;
+            
+            cores.forEach(res => {
+                if (res.target === 'B') { bVotes++; bScore += res.confidence; }
+                else if (res.target === 'P') { pVotes++; pScore += res.confidence; }
+            });
+
+            if (bVotes === 0 && pVotes === 0) return null;
+            return bScore >= pScore ? 'B' : 'P';
+        }
+
         function calculateAllStats() {
-            let coreStats = Array(8).fill(null).map(() => ({ win: 0, loss: 0, total: 0 }));
+            let coreStats = Array(6).fill(null).map(() => ({ win: 0, loss: 0, total: 0 }));
             let overallTotalBets = 0;
             let overallWinCount = 0;
             let overallLossCount = 0;
@@ -682,8 +685,8 @@
                 let purePastHistory = pastHistory.filter(x => x !== 'T');
                 if (purePastHistory.length === 0) continue;
 
+                // 核心勝率統計
                 let cores = getCoresAnalysis(purePastHistory);
-
                 cores.forEach((res, idx) => {
                     if (res.target !== 'NEUTRAL') {
                         coreStats[idx].total++;
@@ -692,19 +695,14 @@
                     }
                 });
 
+                // 最終綜合預測統計 (與介面最終預測建議邏輯一致)
                 if (purePastHistory.length >= 10) {
-                    let bScore = 0, pScore = 0, bVotes = 0, pVotes = 0;
-                    cores.forEach(res => {
-                        if (res.target === 'B') { bVotes++; bScore += res.confidence; }
-                        else if (res.target === 'P') { pVotes++; pScore += res.confidence; }
-                    });
-
-                    if (bVotes === 0 && pVotes === 0) {
+                    let finalPred = getFinalPrediction(purePastHistory);
+                    if (finalPred === null) {
                         overallSkipCount++;
                     } else {
-                        let overallTarget = bScore >= pScore ? 'B' : 'P';
                         overallTotalBets++;
-                        if (overallTarget === actualResult) overallWinCount++;
+                        if (finalPred === actualResult) overallWinCount++;
                         else overallLossCount++;
                     }
                 }
@@ -732,10 +730,31 @@
             let historyContainer = document.getElementById("historyList");
             historyContainer.innerHTML = "";
 
-            baccaratHistory.forEach((res) => {
+            // 生成盤路與預測對錯標記
+            baccaratHistory.forEach((res, index) => {
                 let badge = document.createElement("div");
                 badge.className = `badge-box badge-box-${res}`;
                 badge.innerText = res === 'B' ? '莊' : (res === 'P' ? '閒' : '和');
+
+                // 判斷並顯示是否預測成功
+                if (index > 0) {
+                    let pastHistory = baccaratHistory.slice(0, index).filter(x => x !== 'T');
+                    if (pastHistory.length >= 10) {
+                        let pred = getFinalPrediction(pastHistory);
+                        if (pred) {
+                            let icon = document.createElement("span");
+                            icon.className = "pred-icon";
+                            if (res === 'T') {
+                                icon.innerText = "➖"; // 和局視為退回
+                            } else if (pred === res) {
+                                icon.innerText = "✅";
+                            } else {
+                                icon.innerText = "❌";
+                            }
+                            badge.appendChild(icon);
+                        }
+                    }
+                }
                 historyContainer.appendChild(badge);
             });
 
@@ -762,6 +781,14 @@
             let finalPctElem = document.getElementById("finalPct");
             let finalReasonElem = document.getElementById("finalReason");
 
+            // 將核心結果與統計資料綁定，準備依照勝率排序
+            let combinedCores = analysisResults.map((res, idx) => {
+                return { res: res, stat: allStats.cores[idx] };
+            });
+
+            // 按照勝率由高至低進行排序
+            combinedCores.sort((a, b) => parseFloat(b.stat.rate) - parseFloat(a.stat.rate));
+
             if (pureCount < 10) {
                 let needed = 10 - pureCount;
                 finalTargetElem.innerText = "觀望 (數據累積中)";
@@ -769,8 +796,9 @@
                 finalPctElem.innerText = "綜合可信度 --%";
                 finalReasonElem.innerText = `當前有效局數僅 ${pureCount} 局，全系統加權預測需至少 10 局（不含和局）數據。還差 ${needed} 局。`;
 
-                analysisResults.forEach((res, idx) => {
-                    let cStat = allStats.cores[idx];
+                combinedCores.forEach((item) => {
+                    let res = item.res;
+                    let cStat = item.stat;
                     let hitRateText = `勝率 ${cStat.rate}% (${cStat.win}勝/${cStat.loss}負)`;
                     let targetText = res.target === 'B' ? '莊 (B)' : (res.target === 'P' ? '閒 (P)' : '觀望');
                     let tagClass = res.target === 'B' ? 'tag-B' : (res.target === 'P' ? 'tag-P' : 'tag-N');
@@ -793,15 +821,18 @@
                 return;
             }
 
+            // 計算最終建議 (依然統計所有得分，不受 UI 排序影響)
             let bScore = 0, pScore = 0, bVotes = 0, pVotes = 0;
-
-            analysisResults.forEach((res, idx) => {
+            analysisResults.forEach((res) => {
                 if (res.target === 'B') { bVotes++; bScore += res.confidence; }
                 else if (res.target === 'P') { pVotes++; pScore += res.confidence; }
+            });
 
+            combinedCores.forEach((item) => {
+                let res = item.res;
+                let cStat = item.stat;
                 let targetText = res.target === 'B' ? '莊 (B)' : (res.target === 'P' ? '閒 (P)' : '觀望');
                 let tagClass = res.target === 'B' ? 'tag-B' : (res.target === 'P' ? 'tag-P' : 'tag-N');
-                let cStat = allStats.cores[idx];
                 let hitRateText = `勝率 ${cStat.rate}% (${cStat.win}勝/${cStat.loss}負)`;
 
                 let card = document.createElement("div");
@@ -824,7 +855,7 @@
                 finalTargetElem.innerText = "觀望";
                 finalTargetElem.className = "final-target target-N";
                 finalPctElem.innerText = "綜合可信度 50.00%";
-                finalReasonElem.innerText = "所有 8 大分析模組均呈現觀望或無明確傾向。";
+                finalReasonElem.innerText = "所有 6 大分析模組均呈現觀望或無明確傾向。";
             } else {
                 let winningTarget = bScore >= pScore ? 'B' : 'P';
                 let winVotes = winningTarget === 'B' ? bVotes : pVotes;
@@ -843,7 +874,7 @@
                 }
 
                 finalPctElem.innerText = `綜合可信度 ${finalConfidence}%`;
-                finalReasonElem.innerText = `已達 10 局分析門檻。共 8 個分析核心，其中 ${winVotes} 個模組指向 ${winningTarget === 'B' ? '莊' : '閒'} (莊得分 ${bScore} / 閒得分 ${pScore})。`;
+                finalReasonElem.innerText = `已達 10 局分析門檻。共 6 個分析核心，其中 ${winVotes} 個模組指向 ${winningTarget === 'B' ? '莊' : '閒'} (莊得分 ${bScore} / 閒得分 ${pScore})。`;
             }
         }
 
