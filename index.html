@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>百家樂多維路單分析與旗艦預測系統 (1-3-1/3-1-3 破路反打獨立顯示版)</title>
+    <title>百家樂多維路單分析與旗艦預測系統 (破路反打信號動態影響版)</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -184,6 +184,12 @@
             margin-top: 2px;
             line-height: 1.35;
         }
+        .card-break-tag.active {
+            color: #f43f5e;
+            background: rgba(244, 63, 94, 0.15);
+            border: 1px dashed rgba(244, 63, 94, 0.4);
+            font-weight: bold;
+        }
         .card-reason { font-size: 0.85rem; color: var(--text-muted); line-height: 1.35; }
 
         .stats-panel-bottom { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-top: 12px; }
@@ -205,7 +211,7 @@
 
     <header>
         <h1>百家樂多維路單分析與旗艦預測系統</h1>
-        <p>破路反打獨立顯示升級版 (新增 1-3-1 / 3-1-3 逆勢反打核心)</p>
+        <p>破路反打信號動態影響升級版 (單跳門檻 / 房廳交替 / 1-3-1 & 3-1-3 獨立顯示與干涉)</p>
     </header>
 
     <div class="panel-container">
@@ -405,16 +411,16 @@
             return "";
         }
 
-        // 核心格局解析：升級版（含小龍/大龍、1-3-1、3-1-3反打及破路訊號分類）
+        // 核心格局解析：分離「常規趨勢方向」與「破路/反打臨界點信號」
         function analyzePatternFromSequence(sequence, entityType = 'B_P') {
             let isColor = (entityType === 'RED_BLUE');
             let getItemName = (item) => item === 'RED' ? '紅點' : (item === 'BLUE' ? '藍點' : (item === 'B' ? '莊' : '閒'));
 
-            if (!sequence || sequence.length < 3) return { target: 'NEUTRAL', confidence: 50, reason: '數據不足，無法判定獨立格局', hasBreakSignal: false, breakDesc: '無臨界點破路信號' };
+            if (!sequence || sequence.length < 3) return { target: 'NEUTRAL', confidence: 50, reason: '數據不足，無法判定獨立格局', hasBreakSignal: false, breakDesc: '【常規方向】無破路觸發' };
 
             let matrix = buildRoadMatrix(sequence);
             let numCols = matrix.length;
-            if (numCols === 0) return { target: 'NEUTRAL', confidence: 50, reason: '無有效數據', hasBreakSignal: false, breakDesc: '無臨界點破路信號' };
+            if (numCols === 0) return { target: 'NEUTRAL', confidence: 50, reason: '無有效數據', hasBreakSignal: false, breakDesc: '【常規方向】無破路觸發' };
 
             let colLens = matrix.map(col => col.length);
             let curCol = matrix[numCols - 1];
@@ -427,134 +433,109 @@
             let l3 = numCols >= 3 ? colLens[numCols - 3] : 0;
             let l4 = numCols >= 4 ? colLens[numCols - 4] : 0;
 
-            let signals = [];
+            // 1. 常規趨勢方向分析（順打 / 補齊）
+            let normalTarget = lastItem;
+            let normalConf = 75;
+            let normalReason = `【常規趨勢順打】依循當前連開趨勢預測 ${getItemName(lastItem)}`;
 
-            // 1. 小龍與大龍判斷 (趨勢 順打)
             if (curLen === 3) {
-                signals.push({ target: lastItem, type: 'trend', baseConf: 86, desc: `【小龍】形態 (連開 3 顆)，順打上一顆 ${getItemName(lastItem)}` });
+                normalTarget = lastItem;
+                normalConf = 85;
+                normalReason = `【小龍形態】(連開 3 顆)，順打上一顆 ${getItemName(lastItem)}`;
             } else if (curLen >= 4) {
                 let dragonLevel = curLen >= 6 ? '超級大龍' : '大龍';
-                signals.push({ target: lastItem, type: 'trend', baseConf: 91 + Math.min(curLen - 4, 3), desc: `【${dragonLevel}】形態 (連開 ${curLen} 顆)，強勢順打上一顆 ${getItemName(lastItem)}` });
+                normalTarget = lastItem;
+                normalConf = 90 + Math.min(curLen - 4, 5);
+                normalReason = `【${dragonLevel}】(連開 ${curLen} 顆)，強勢順打上一顆 ${getItemName(lastItem)}`;
+            } else if (numCols >= 3 && l3 === 2 && l2 === 2 && l1 === 1) {
+                normalTarget = lastItem;
+                normalConf = 84;
+                normalReason = `【雙跳 2-2-1】格局，預測補齊 ${getItemName(lastItem)}`;
+            } else if (numCols >= 2 && l2 === 3 && l1 === 2) {
+                normalTarget = lastItem;
+                normalConf = 83;
+                normalReason = `【3-2】格局，順打上一顆 ${getItemName(lastItem)}`;
+            } else if (numCols >= 3 && l3 === 3 && l2 === 3 && l1 === 2) {
+                normalTarget = lastItem;
+                normalConf = 90;
+                normalReason = `【3-3-2】格局，順打上一顆 ${getItemName(lastItem)}`;
             }
 
-            // 2. 單跳檢測 (反打)
+            // 2. 破路 / 反打臨界點信號判定（當作強弱信號，動態影響常規方向）
+            let breakSignals = [];
+            let hasBreak = false;
+
+            // 條件 A：單跳過多（連續單跳 >= 5 顆）
             let singleCount = 0;
             for (let i = numCols - 1; i >= 0; i--) {
                 if (colLens[i] === 1) singleCount++;
                 else break;
             }
-            if (singleCount >= 3) {
-                signals.push({ target: oppItem, type: 'break', baseConf: 88, desc: `連續 ${singleCount} 次單跳 (1-1-1...)，觸發反打上一顆 ${getItemName(oppItem)}` });
+            if (singleCount >= 5) {
+                hasBreak = true;
+                breakSignals.push({ target: oppItem, confBoost: 14, desc: `【臨界點】連續 ${singleCount} 次單跳過多，觸發反打上一顆 ${getItemName(oppItem)}` });
+            } else if (singleCount === 4) {
+                hasBreak = true;
+                breakSignals.push({ target: oppItem, confBoost: 10, desc: `【警戒】連續 4 次單跳，留意反打 ${getItemName(oppItem)}` });
             }
 
-            // 3. 雙跳 2-2-1 (順打)
-            if (numCols >= 3 && l3 === 2 && l2 === 2 && l1 === 1) {
-                signals.push({ target: lastItem, type: 'trend', baseConf: 86, desc: `雙跳格局 2-2-1，預測補齊 ${getItemName(lastItem)}` });
+            // 條件 B：房廳交替形態（1-2-1-2 / 2-1-2-1 / 1-3-1 / 3-1-3）
+            let isRoomPattern = false;
+            if (numCols >= 4 && l4 === 1 && l3 === 2 && l2 === 1 && l1 === 2) isRoomPattern = true;
+            if (numCols >= 4 && l4 === 2 && l3 === 1 && l2 === 2 && l1 === 1) isRoomPattern = true;
+            if (numCols >= 3 && l3 === 1 && l2 === 2 && l1 === 1) isRoomPattern = true;
+            if (numCols >= 3 && l3 === 2 && l2 === 1 && l1 === 2) isRoomPattern = true;
+
+            if (isRoomPattern) {
+                hasBreak = true;
+                breakSignals.push({ target: oppItem, confBoost: 12, desc: `【破路信號】偵測到房廳交替形態（如 1-2-1-2 或 2-1-2-1），觸發反打上一顆 ${getItemName(oppItem)}` });
             }
 
-            // 4. 房廳格局 (反打)
-            if (numCols >= 3) {
-                if ((l3 === 1 && l2 === 2 && l1 === 1) || (l3 === 2 && l2 === 1 && l1 === 2)) {
-                    signals.push({ target: oppItem, type: 'break', baseConf: 86, desc: `房廳格局 (${l3}-${l2}-${l1})，觸發反打上一顆 ${getItemName(oppItem)}` });
-                }
-            }
-
-            // 5. 3-2 格局 (順打)
-            if (numCols >= 2 && l2 === 3 && l1 === 2) {
-                signals.push({ target: lastItem, type: 'trend', baseConf: 85, desc: `出現 3-2 格局 (${l2}-${l1})，順打上一顆 ${getItemName(lastItem)}` });
-            }
-
-            // 6. 3-3-2 格局 (順打)
-            if (numCols >= 3 && l3 === 3 && l2 === 3 && l1 === 2) {
-                signals.push({ target: lastItem, type: 'trend', baseConf: 92, desc: `出現 3-3-2 格局 (${l3}-${l2}-${l1})，順打上一顆 ${getItemName(lastItem)}` });
-            }
-
-            // 7. 1-3-1 格局 (反打)
+            // 條件 C：1-3-1 或 3-1-3 核心反打
             if (numCols >= 3 && l3 === 1 && l2 === 3 && l1 === 1) {
-                signals.push({ target: oppItem, type: 'break', baseConf: 87, desc: `出現 1-3-1 格局 (${l3}-${l2}-${l1})，觸發臨界點反打上一顆 ${getItemName(oppItem)}` });
+                hasBreak = true;
+                breakSignals.push({ target: oppItem, confBoost: 13, desc: `【破路信號】出現 1-3-1 核心格局，觸發反打上一顆 ${getItemName(oppItem)}` });
             }
-
-            // 8. 3-1-3 格局 (反打)
             if (numCols >= 3 && l3 === 3 && l2 === 1 && l1 === 3) {
-                signals.push({ target: oppItem, type: 'break', baseConf: 89, desc: `出現 3-1-3 格局 (${l3}-${l2}-${l1})，觸發臨界點反打上一顆 ${getItemName(oppItem)}` });
+                hasBreak = true;
+                breakSignals.push({ target: oppItem, confBoost: 14, desc: `【破路信號】出現 3-1-3 核心格局，觸發反打上一顆 ${getItemName(oppItem)}` });
             }
 
-            if (signals.length === 0) {
-                return { target: 'NEUTRAL', confidence: 50, reason: '當前無典型強烈規律，建議觀望', hasBreakSignal: false, breakDesc: '【常規順打】無破路反打觸發' };
+            let finalTarget = normalTarget;
+            let finalConf = normalConf;
+            let finalReason = normalReason;
+            let breakDescStr = "【常規方向】無破路反打觸發，依循趨勢";
+
+            if (hasBreak && breakSignals.length > 0) {
+                let latestBreak = breakSignals[breakSignals.length - 1];
+                // 破路反打信號強勢覆蓋常規方向
+                finalTarget = latestBreak.target;
+                finalConf = Math.min(normalConf + latestBreak.confBoost, 98);
+                finalReason = `【破路信號介入】原常規指向 ${getItemName(normalTarget)}，但因 ${latestBreak.desc}，強勢反打修正為【${getItemName(finalTarget)}】！`;
+                breakDescStr = breakSignals.map(s => s.desc).join(" / ");
             }
 
-            let targetScores = {};
-            let descriptions = [];
-            let breakDescriptions = [];
-            let totalSignalsCount = signals.length;
-            let hasBreak = false;
-
-            signals.forEach(sig => {
-                if (!targetScores[sig.target]) {
-                    targetScores[sig.target] = { score: 0, count: 0 };
-                }
-                targetScores[sig.target].score += sig.baseConf;
-                targetScores[sig.target].count += 1;
-                descriptions.push(sig.desc);
-                if (sig.type === 'break') {
-                    hasBreak = true;
-                    breakDescriptions.push(sig.desc);
-                }
-            });
-
-            let bestTarget = 'NEUTRAL';
-            let maxScore = 0;
-            let maxCount = 0;
-
-            for (let t in targetScores) {
-                if (targetScores[t].score > maxScore) {
-                    maxScore = targetScores[t].score;
-                    maxCount = targetScores[t].count;
-                    bestTarget = t;
-                }
-            }
-
-            let avgConf = maxScore / maxCount;
-            let multiSignalBoost = totalSignalsCount > 1 ? (totalSignalsCount - 1) * 3 : 0;
-            let finalConf = Math.min(Math.round(avgConf + multiSignalBoost), 98);
-
-            let reasonPrefix = totalSignalsCount > 1 ? `【多重訊號交匯 增強訊號】` : ``;
-            let reasonStr = reasonPrefix + descriptions.join(" ＋ ");
-            let breakDescStr = hasBreak ? `【臨界點破路/反打觸發】: ` + breakDescriptions.join(" / ") : `【常規順打訊號】: 當前維持趨勢順打`;
-
-            return { target: bestTarget, confidence: finalConf, reason: reasonStr, hasBreakSignal: hasBreak, breakDesc: breakDescStr };
+            return { target: finalTarget, confidence: finalConf, reason: getStrengthTag(finalConf) + finalReason, hasBreakSignal: hasBreak, breakDesc: breakDescStr };
         }
 
-        // 大路形態：支援獨立顯示破路/反打狀態
+        // 大路形態預測
         function analyzeBigRoadPatterns(pureHistory, skipBreak = false) {
             let result = analyzePatternFromSequence(pureHistory, 'B_P');
             if (skipBreak && result.target !== 'NEUTRAL' && result.confidence >= 88) {
                 let lastItem = pureHistory[pureHistory.length - 1];
                 return { name: '大路形態 (主路獨立訊號)', target: lastItem, confidence: 75, reason: '【臨界點緩衝保護】上局破路預測未成功，本局暫時依循正常趨勢 1 局', breakDesc: '【緩衝保護中】暫停破路反打' };
             }
-
-            if (result.target !== 'NEUTRAL' && pureHistory.length >= 20) {
-                let bCount = pureHistory.filter(x => x === 'B').length;
-                let pCount = pureHistory.filter(x => x === 'P').length;
-                let dominant = bCount >= pCount ? 'B' : 'P';
-                if (result.target === dominant) {
-                    result.confidence = Math.min(result.confidence + 2, 98);
-                    result.reason += ` ［全域趨勢順向容錯加權］`;
-                }
-            }
-
-            let finalReason = result.target !== 'NEUTRAL' ? getStrengthTag(result.confidence) + result.reason : result.reason;
-            return { name: '大路形態 (主路獨立訊號)', target: result.target, confidence: result.confidence, reason: finalReason, breakDesc: result.breakDesc };
+            return { name: '大路形態 (主路獨立訊號)', target: result.target, confidence: result.confidence, reason: result.reason, breakDesc: result.breakDesc };
         }
 
-        // 下三路分析：支援獨立顯示破路/反打狀態
+        // 下三路分析
         function analyzeDownThreeRoads(pureHistory, offset, roadName, skipBreak = false) {
             let colorSequence = getDownThreeRoadSequence(pureHistory, offset);
-            if (colorSequence.length === 0) return { name: roadName, target: 'NEUTRAL', confidence: 50, reason: '走勢轉向次數不足，尚未形成此路', breakDesc: '無臨界點破路信號' };
+            if (colorSequence.length === 0) return { name: roadName, target: 'NEUTRAL', confidence: 50, reason: '走勢轉向次數不足，尚未形成此路', breakDesc: '【常規方向】無破路觸發' };
             
             let patternAnalysis = analyzePatternFromSequence(colorSequence, 'RED_BLUE');
             if (patternAnalysis.target === 'NEUTRAL') {
-                return { name: roadName, target: 'NEUTRAL', confidence: 50, reason: '路子顏色交替不規律，無明確趨勢', breakDesc: '無臨界點破路信號' };
+                return { name: roadName, target: 'NEUTRAL', confidence: 50, reason: '路子顏色交替不規律，無明確趨勢', breakDesc: '【常規方向】無破路觸發' };
             }
 
             let targetColor = patternAnalysis.target;
@@ -571,12 +552,12 @@
 
             if (colorB === targetColor && colorP !== targetColor) {
                 ownTarget = 'B';
-                reasonStr = `指標強烈指向開【${colorName}】 ➔ 對位推算唯有【莊】滿足。`;
+                reasonStr = `指標指向【${colorName}】 ➔ 對位推算唯有【莊】滿足。`;
             } else if (colorP === targetColor && colorB !== targetColor) {
                 ownTarget = 'P';
-                reasonStr = `指標強烈指向開【${colorName}】 ➔ 對位推算唯有【閒】滿足。`;
+                reasonStr = `指標指向【${colorName}】 ➔ 對位推算唯有【閒】滿足。`;
             } else {
-                return { name: roadName, target: 'NEUTRAL', confidence: 50, reason: `預測開【${colorName}】，但莊閒雙方試算結果對稱，失去方向性指標`, breakDesc: patternAnalysis.breakDesc };
+                return { name: roadName, target: 'NEUTRAL', confidence: 50, reason: `預測開【${colorName}】，但莊閒雙方試算結果對稱，失去方向性`, breakDesc: patternAnalysis.breakDesc };
             }
 
             if (skipBreak && conf >= 88) {
@@ -584,11 +565,11 @@
                 return { name: roadName, target: lastItem, confidence: 75, reason: `【臨界點緩衝保護】上局破路預測未成功，本局依循正常趨勢 1 局`, breakDesc: '【緩衝保護中】暫停破路反打' };
             }
 
-            let finalReason = getStrengthTag(conf) + patternAnalysis.reason + ' ➔ ' + reasonStr;
+            let finalReason = patternAnalysis.reason + ' ➔ ' + reasonStr;
             return { name: roadName, target: ownTarget, confidence: conf, reason: finalReason, breakDesc: patternAnalysis.breakDesc };
         }
 
-        // 盤珠路九宮格核心：3x3 比例僅計莊閒 + Row 1 & Row 2 觀望
+        // 盤珠路九宮格核心
         function analyzeNineGridBeadRoad(pureHistory) {
             let grid = [];
             let currentCol = [];
@@ -623,13 +604,11 @@
                             if (grid[c + dc] && grid[c + dc][r + dr]) filledCount++;
                         }
                     }
-                    if (filledCount >= 8) {
-                        bestWindow = { c, r };
-                    }
+                    if (filledCount >= 8) bestWindow = { c, r };
                 }
             }
 
-            let cells = [];
+            let cells = bestWindow ? [] : pureHistory.slice(-9);
             if (bestWindow) {
                 for (let dc = 0; dc < 3; dc++) {
                     for (let dr = 0; dr < 3; dr++) {
@@ -637,8 +616,6 @@
                         if (val) cells.push(val);
                     }
                 }
-            } else {
-                cells = pureHistory.slice(-9);
             }
 
             if (cells.length < 8) {
@@ -647,15 +624,9 @@
 
             let countB = cells.filter(x => x === 'B').length;
             let countP = cells.filter(x => x === 'P').length;
-            let totalBP = countB + countP;
-
-            if (totalBP === 0) {
-                return { name: '盤珠路九宮格 (全局輔助)', target: 'NEUTRAL', confidence: 50, reason: '莊閒總數為零', breakDesc: '【全局比例防禦】無效數據' };
-            }
-
             let diff = Math.abs(countB - countP);
             if (diff <= 2) {
-                return { name: '盤珠路九宮格 (全局輔助)', target: 'NEUTRAL', confidence: 50, reason: `九宮格莊閒比例 (莊:${countB}, 閒:${countP}) 差距 (${diff}) ≤ 2，無明確比例`, breakDesc: '【全局比例防禦】差距過小' };
+                return { name: '盤珠路九宮格 (全局輔助)', target: 'NEUTRAL', confidence: 50, reason: `九宮格莊閒比例差距 (${diff}) ≤ 2，無明確比例`, breakDesc: '【全局比例防禦】差距過小' };
             }
 
             let majority = countB > countP ? 'B' : 'P';
@@ -666,21 +637,13 @@
             let globalP = pureHistory.filter(x => x === 'P').length;
             let globalDiff = Math.abs(globalB - globalP);
 
-            let target = 'NEUTRAL';
-            let reasonStr = "";
-            let breakDesc = '【全局比例順打】依循多數/少數分佈';
-
-            if (globalDiff <= 2) {
-                target = minority;
-                reasonStr = `九宮格純莊閒比例 (${ratioStr})，全局差 (${globalDiff}) ≤ 2，推薦【比例較少】 (${minority === 'B' ? '莊' : '閒'})`;
-            } else {
-                target = majority;
-                reasonStr = `九宮格純莊閒比例 (${ratioStr})，全局差 (${globalDiff}) > 2，推薦【比例較多】 (${majority === 'B' ? '莊' : '閒'})`;
-            }
+            let target = globalDiff <= 2 ? minority : majority;
+            let reasonStr = `九宮格純莊閒比例 (${ratioStr})，全局差 (${globalDiff}) ${globalDiff <= 2 ? '≤ 2，推薦較少方' : '> 2，推薦較多方'}`;
+            let breakDesc = '【全局比例順打】無極限反打觸發';
 
             if (currentRowInCol === 5 && target !== 'NEUTRAL') {
                 target = target === 'B' ? 'P' : 'B';
-                reasonStr += ` ➔ 觸及盤珠路第 6 Row，執行【反打】操作！`;
+                reasonStr += ` ➔ 觸及盤珠路第 6 Row，執行【極限反打】！`;
                 breakDesc = '【臨界點極限反打】觸及第 6 Row 強制反打';
             }
 
@@ -692,7 +655,6 @@
             if (pureHistory.length < 11) return false;
             let pastHistory = pureHistory.slice(0, -1);
             let actualNext = pureHistory[pureHistory.length - 1];
-            
             let pastCores = getCoresAnalysisInternal(pastHistory, true);
             let pastRes = pastCores[coreIndex];
             if (pastRes && pastRes.confidence >= 88 && pastRes.target !== 'NEUTRAL' && pastRes.target !== actualNext) {
@@ -898,7 +860,8 @@
                     let targetText = res.target === 'B' ? '莊 (B)' : (res.target === 'P' ? '閒 (P)' : '觀望');
                     let tagClass = res.target === 'B' ? 'tag-B' : (res.target === 'P' ? 'tag-P' : 'tag-N');
                     let confHtml = `<span class="card-conf">可信度 ${res.confidence}%</span>`;
-                    let breakTagHtml = res.breakDesc ? `<div class="card-break-tag">${res.breakDesc}</div>` : "";
+                    let breakTagClass = res.breakDesc.includes('臨界點') || res.breakDesc.includes('破路信號') ? "card-break-tag active" : "card-break-tag";
+                    let breakTagHtml = res.breakDesc ? `<div class="${breakTagClass}">${res.breakDesc}</div>` : "";
 
                     let card = document.createElement("div");
                     card.className = "analysis-card";
@@ -945,7 +908,8 @@
                     tagClass = "tag-N";
                 }
 
-                let breakTagHtml = res.breakDesc ? `<div class="card-break-tag">${res.breakDesc}</div>` : "";
+                let breakTagClass = res.breakDesc.includes('臨界點') || res.breakDesc.includes('破路信號') ? "card-break-tag active" : "card-break-tag";
+                let breakTagHtml = res.breakDesc ? `<div class="${breakTagClass}">${res.breakDesc}</div>` : "";
 
                 let card = document.createElement("div");
                 card.className = "analysis-card";
