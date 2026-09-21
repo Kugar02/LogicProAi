@@ -294,12 +294,12 @@
 
         // 新增核心邏輯：孫子兵法 (盤珠路 3x3 矩陣框選分析)
         function calculateSunTzuPrediction(history) {
-            // 起始要求：至少 14 局已開數據 (第 15 局為 Row 3, Col 3 預測起點)
+            // 起始要求：至少 14 局已開數據 (第 15 局為預測起點)
             if (history.length < 14) {
                 return { signal: "觀望", reason: "局數不足 14 局 (需由第 3 行第 3 列起點開始)" };
             }
 
-            // 計算下一個預測點在盤珠路中的位置 (1-indexed)
+            // 計算下一個預測點在盤珠路中的位置 (6行一列)
             const targetCol = Math.floor(history.length / 6) + 1;
             const targetRow = (history.length % 6) + 1;
 
