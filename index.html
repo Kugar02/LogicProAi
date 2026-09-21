@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>百家樂多維路單分析與旗艦預測系統 (破路機制聯動版)</title>
+    <title>百家樂多維路單分析與旗艦預測系統 (全核心聯動版)</title>
     <style>
         :root {
             --bg-color: #0b0f19;
@@ -223,7 +223,7 @@
 
     <header>
         <h1>百家樂多維路單分析與旗艦預測系統</h1>
-        <p>專業線上真人視訊面版 • 4 大核心與 7 大邏輯 + 和局機制 & 破路/反打聯動版</p>
+        <p>專業線上真人視訊面版 • 5 大核心 (4大路單 + 和局機制) 與 7 大邏輯聯動版</p>
     </header>
 
     <div class="panel-container">
@@ -311,7 +311,7 @@
 
     <div class="dashboard">
         <div class="final-card">
-            <div class="final-title">最終預測建議 (和局與四大核心聯動)</div>
+            <div class="final-title">最終預測建議 (4大核心 + 和局機制綜合判定)</div>
             <div id="finalTarget" class="final-target target-N">觀望 (累積數據中)</div>
             <div id="finalPct" class="confidence-box">綜合可信度 --%</div>
             <div id="finalReason" class="final-reason">需要至少 10 局有效數據（不含和局）才能啟動模組預測。</div>
@@ -432,7 +432,7 @@
         }
 
         // ==========================================
-        // 和局機制 (Tie Mechanism) 判定邏輯
+        // 和局機制 (Tie Mechanism) 判定邏輯 (核心 5)
         // ==========================================
         function getTieMechanismPrediction(history) {
             let tieGroups = [];
@@ -464,7 +464,7 @@
                     active: true,
                     target: 'NEUTRAL',
                     confidence: 50,
-                    reason: '【和局機制】第一次出現和局後的分析點或連續和局，觸發機制轉為觀望。'
+                    reason: '【和局機制】第一次出現和局後的分析點或連續出現和局，轉為觀望。'
                 };
             }
 
@@ -654,7 +654,6 @@
             let lastItem = pureHistory[pureHistory.length - 1];
             let oppositeItem = lastItem === 'B' ? 'P' : 'B';
 
-            // 如果大路觸發了邏輯 3（小龍/大龍），需檢查其他核心支持
             if (res.isLogic3 && res.target !== 'NEUTRAL') {
                 let c2Res = analyzeDownThreeRoadsWithMechanism(pureHistory, 1, '下三路 (大眼仔 核心 2)');
                 let c3Res = analyzeDownThreeRoadsWithMechanism(pureHistory, 2, '下三路 (小路 核心 3)');
@@ -667,7 +666,6 @@
                 if (c4Res.target === targetDir) supportCount++;
 
                 if (supportCount < 2) {
-                    // 不足 2 個核心支持，判定「斷龍」反打
                     let getItemName = (item) => item === 'B' ? '莊' : '閒';
                     return {
                         name: '大路形態 (核心 1)',
@@ -748,35 +746,67 @@
             };
         }
 
-        function getCoresAnalysis(pureHistory) {
+        // 和局機制分析包裝 (核心 5)
+        function getTieMechanismAnalysis(history) {
+            let tieRes = getTieMechanismPrediction(history);
+            if (!tieRes.active) {
+                return {
+                    name: '和局機制分析 (核心 5)',
+                    target: 'NEUTRAL',
+                    confidence: 50,
+                    logicReason: '當前未觸發和局機制或非和局後第一局',
+                    mechanismReason: '【和局機制】等待和局出現後啟動動態推演。',
+                    breakStrength: '低 (無)'
+                };
+            }
+            return {
+                name: '和局機制分析 (核心 5)',
+                target: tieRes.target,
+                confidence: tieRes.confidence,
+                logicReason: tieRes.reason,
+                mechanismReason: '【和局機制】動態推演成功，作為獨立核心參與綜合投票。',
+                breakStrength: '中 (機制介入)'
+            };
+        }
+
+        // 取得所有 5 個核心分析結果
+        function getAllCoresAnalysis(history) {
+            let pureHistory = history.filter(x => x !== 'T');
             if (pureHistory.length < 10) {
                 let reasonStr = `有效牌局未達 10 局門檻 (當前 ${pureHistory.length}/10)，保持觀望`;
-                return Array(4).fill(null).map((_, idx) => ({
+                let baseEmpty = Array(4).fill(null).map((_, idx) => ({
                     name: ['大路形態 (核心 1)', '下三路 (大眼仔 核心 2)', '下三路 (小路 核心 3)', '下三路 (曱甴路 核心 4)'][idx],
                     target: 'NEUTRAL', confidence: 50,
                     logicReason: reasonStr,
-                    mechanismReason: '【破路機制】等待累積 10 局有效數據以啟動連續性反打評估。',
+                    mechanismReason: '【破路機制】等待累積 10 局有效數據。',
                     breakStrength: '低'
                 }));
+                baseEmpty.push({
+                    name: '和局機制分析 (核心 5)',
+                    target: 'NEUTRAL',
+                    confidence: 50,
+                    logicReason: reasonStr,
+                    mechanismReason: '【和局機制】等待有效局數達標。',
+                    breakStrength: '低'
+                });
+                return baseEmpty;
             }
 
             let bigRoadRes = analyzeBigRoadWithMechanism(pureHistory);
             let res1 = analyzeDownThreeRoadsWithMechanism(pureHistory, 1, '下三路 (大眼仔 核心 2)');
             let res2 = analyzeDownThreeRoadsWithMechanism(pureHistory, 2, '下三路 (小路 核心 3)');
             let res3 = analyzeDownThreeRoadsWithMechanism(pureHistory, 3, '下三路 (曱甴路 核心 4)');
+            let tieRes = getTieMechanismAnalysis(history);
 
-            return [bigRoadRes, res1, res2, res3];
+            return [bigRoadRes, res1, res2, res3, tieRes];
         }
 
-        function getFinalPrediction(pureHistory) {
-            // 優先檢核和局機制
-            let tieRes = getTieMechanismPrediction(baccaratHistory);
-            if (tieRes.active) {
-                return tieRes.target; // 'NEUTRAL', 'B', or 'P'
-            }
-
+        // 最終預測建議：綜合 4 大核心與和局機制判定
+        function getFinalPrediction(history) {
+            let pureHistory = history.filter(x => x !== 'T');
             if (pureHistory.length < 10) return null;
-            let cores = getCoresAnalysis(pureHistory);
+
+            let cores = getAllCoresAnalysis(history);
             let bScore = 0, pScore = 0, bVotes = 0, pVotes = 0;
             cores.forEach(res => {
                 if (res.target !== 'NEUTRAL' && res.confidence >= 70) {
@@ -788,19 +818,20 @@
             return bScore >= pScore ? 'B' : 'P';
         }
 
+        // 實際預測戰績與統計重新修正
         function calculateAllStats() {
-            let coreStats = Array(4).fill(null).map(() => ({ win: 0, loss: 0, total: 0 }));
+            let coreStats = Array(5).fill(null).map(() => ({ win: 0, loss: 0, total: 0 }));
             let overallTotalBets = 0, overallWinCount = 0, overallLossCount = 0, overallSkipCount = 0;
 
             for (let i = 1; i < baccaratHistory.length; i++) {
                 let actualResult = baccaratHistory[i];
-                if (actualResult === 'T') continue;
+                if (actualResult === 'T') continue; // 和局視為不計算常規莊閒下注輸贏
 
-                let pastHistory = baccaratHistory.slice(0, i + 1); // 包含當前局以便測試和局機制
+                let pastHistory = baccaratHistory.slice(0, i + 1);
                 let purePastHistory = pastHistory.filter(x => x !== 'T');
-                if (purePastHistory.length === 0) continue;
+                if (purePastHistory.length < 10) continue;
 
-                let cores = getCoresAnalysis(purePastHistory);
+                let cores = getAllCoresAnalysis(pastHistory);
                 cores.forEach((res, idx) => {
                     if (res.target !== 'NEUTRAL' && res.confidence >= 70) {
                         coreStats[idx].total++;
@@ -809,14 +840,13 @@
                     }
                 });
 
-                if (purePastHistory.length >= 10 || getTieMechanismPrediction(pastHistory).active) {
-                    let finalPred = getFinalPrediction(pastHistory);
-                    if (finalPred === null || finalPred === 'NEUTRAL') overallSkipCount++;
-                    else {
-                        overallTotalBets++;
-                        if (finalPred === actualResult) overallWinCount++;
-                        else overallLossCount++;
-                    }
+                let finalPred = getFinalPrediction(pastHistory);
+                if (finalPred === null || finalPred === 'NEUTRAL') {
+                    overallSkipCount++;
+                } else {
+                    overallTotalBets++;
+                    if (finalPred === actualResult) overallWinCount++;
+                    else overallLossCount++;
                 }
             }
 
@@ -901,6 +931,7 @@
             document.getElementById("countP").innerText = countP;
             document.getElementById("countT").innerText = countT;
 
+            // 重新修正珠盤路成功/不成功圖形標記，嚴格比對最終預測建議
             baccaratHistory.forEach((res, index) => {
                 let badge = document.createElement("div");
                 badge.className = `badge-box badge-box-${res}`;
@@ -909,14 +940,18 @@
                 if (index > 0) {
                     let pastHistory = baccaratHistory.slice(0, index + 1);
                     let purePastHistory = pastHistory.filter(x => x !== 'T');
-                    if (purePastHistory.length >= 10 || getTieMechanismPrediction(pastHistory).active) {
+                    if (purePastHistory.length >= 10) {
                         let pred = getFinalPrediction(pastHistory);
                         if (pred && pred !== 'NEUTRAL') {
                             let icon = document.createElement("span");
                             icon.className = "pred-icon";
-                            if (res === 'T') icon.innerText = "➖";
-                            else if (pred === res) icon.innerText = "✅";
-                            else icon.innerText = "❌";
+                            if (res === 'T') {
+                                icon.innerText = "➖";
+                            } else if (pred === res) {
+                                icon.innerText = "✅";
+                            } else {
+                                icon.innerText = "❌";
+                            }
                             badge.appendChild(icon);
                         }
                     }
@@ -948,7 +983,7 @@
             document.getElementById("statLossCount").innerText = overallStats.lossCount;
             document.getElementById("statSkipCount").innerText = overallStats.skipCount;
 
-            let analysisResults = getCoresAnalysis(pureHistory);
+            let analysisResults = getAllCoresAnalysis(baccaratHistory);
             let gridContainer = document.getElementById("analysisGrid");
             gridContainer.innerHTML = "";
 
@@ -957,52 +992,6 @@
             let finalReasonElem = document.getElementById("finalReason");
 
             let combinedCores = analysisResults.map((res, idx) => ({ res: res, stat: allStats.cores[idx] }));
-
-            // 檢查和局機制狀態
-            let tieRes = getTieMechanismPrediction(baccaratHistory);
-
-            if (tieRes.active) {
-                // 和局機制啟動，優先覆蓋最終預測
-                if (tieRes.target === 'B') {
-                    finalTargetElem.innerText = "下注 莊 (B) [和局機制覆蓋]";
-                    finalTargetElem.className = "final-target target-B";
-                } else if (tieRes.target === 'P') {
-                    finalTargetElem.innerText = "下注 閒 (P) [和局機制覆蓋]";
-                    finalTargetElem.className = "final-target target-P";
-                } else {
-                    finalTargetElem.innerText = "觀望 (和局機制觸發)";
-                    finalTargetElem.className = "final-target target-N";
-                }
-                finalPctElem.innerText = `綜合可信度 ${tieRes.confidence}%`;
-                finalReasonElem.innerText = tieRes.reason;
-
-                combinedCores.forEach((item) => {
-                    let res = item.res, cStat = item.stat;
-                    let hitRateText = `勝率 ${cStat.rate}% (${cStat.win}勝/${cStat.loss}負)`;
-                    let card = document.createElement("div");
-                    card.className = "analysis-card";
-                    card.innerHTML = `
-                        <div class="card-header">
-                            <span class="card-title">${res.name}</span>
-                            <div class="card-meta">
-                                <span class="card-hitrate">${hitRateText}</span>
-                                <span class="card-conf">可信度 --% (和局機制覆蓋)</span>
-                                <span class="card-target tag-N">機制介入</span>
-                            </div>
-                        </div>
-                        <div class="section-box">
-                            <div class="section-title">📊 邏輯分析</div>
-                            <div class="section-content">${res.logicReason}</div>
-                        </div>
-                        <div class="section-box">
-                            <div class="section-title">🛡️ 破路與和局機制</div>
-                            <div class="section-content">${tieRes.reason}</div>
-                        </div>
-                    `;
-                    gridContainer.appendChild(card);
-                });
-                return;
-            }
 
             if (pureCount < 10) {
                 let needed = 10 - pureCount;
@@ -1034,7 +1023,7 @@
                             <div class="section-content">${res.logicReason}</div>
                         </div>
                         <div class="section-box">
-                            <div class="section-title">🛡️ 破路/反打機制 (臨界強度: ${res.breakStrength})</div>
+                            <div class="section-title">🛡️ 機制狀態 (${res.breakStrength})</div>
                             <div class="section-content">${res.mechanismReason}</div>
                         </div>
                     `;
@@ -1064,7 +1053,7 @@
                 } else if (res.confidence >= 70) {
                     confHtml = `<span class="card-conf">可信度 ${res.confidence}%</span>`;
                 } else {
-                    confHtml = `<span class="card-conf-low">可信度 ${res.confidence}% (機制壓制)</span>`;
+                    confHtml = `<span class="card-conf-low">可信度 ${res.confidence}% (壓制)</span>`;
                     targetText = "觀望";
                     tagClass = "tag-N";
                 }
@@ -1085,7 +1074,7 @@
                         <div class="section-content">${res.logicReason}</div>
                     </div>
                     <div class="section-box">
-                        <div class="section-title">🛡️ 破路/反打機制 (臨界強度: ${res.breakStrength})</div>
+                        <div class="section-title">🛡️ 機制狀態 (${res.breakStrength})</div>
                         <div class="section-content">${res.mechanismReason}</div>
                     </div>
                 `;
@@ -1095,15 +1084,15 @@
             if (bVotes === 0 && pVotes === 0) {
                 finalTargetElem.innerText = "觀望";
                 finalTargetElem.className = "final-target target-N";
-                finalPctElem.innerText = "綜合可信度 50.00%";
-                finalReasonElem.innerText = "四大核心的破路機制偵測到連續性過高或無符合邏輯，系統全面觀望，建議暫緩下注。";
+                finalPctElem.innerText = "綜合可信度 50.0%";
+                finalReasonElem.innerText = "多維核心與和局機制偵測到信號分歧或強度不足，系統全面觀望，建議暫緩下注。";
             } else {
                 let winningTarget = bScore >= pScore ? 'B' : 'P';
                 let winVotes = winningTarget === 'B' ? bVotes : pVotes;
                 let winScore = winningTarget === 'B' ? bScore : pScore;
                 
                 let avgWinConf = winScore / winVotes;
-                let consensusRate = winVotes / validCores;
+                let consensusRate = winVotes / (validCores || 1);
                 let finalConfidence = (avgWinConf * 0.7 + consensusRate * 30).toFixed(1);
 
                 if (winningTarget === 'B') {
@@ -1115,7 +1104,7 @@
                 }
 
                 finalPctElem.innerText = `綜合可信度 ${finalConfidence}%`;
-                finalReasonElem.innerText = `已達 10 局分析門檻。4 個核心中有效觸發 ${validCores} 個，其中 ${winVotes} 個核心信號經破路機制修正後強力指向 ${winningTarget === 'B' ? '莊' : '閒'}。`;
+                finalReasonElem.innerText = `已達 10 局分析門檻。5 個核心中有效觸發 ${validCores} 個，其中 ${winVotes} 個核心共同指向 ${winningTarget === 'B' ? '莊' : '閒'}。`;
             }
         }
 
