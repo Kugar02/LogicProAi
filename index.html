@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>百家樂多維路單分析與旗艦預測系統 (純賽果核心版)</title>
+    <title>百家樂多維路單分析與旗艦預測系統 (全域容錯與小龍大龍升級版)</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -194,7 +194,7 @@
 
     <header>
         <h1>百家樂多維路單分析與旗艦預測系統</h1>
-        <p>5 大路單核心 (升級強弱星數 3-5 星 + 旗艦臨界點防禦過濾)</p>
+        <p>全域容錯強化版 (小龍/大龍判斷 + 多重訊號交匯增強 + 盤珠路九宮格)</p>
     </header>
 
     <div class="panel-container">
@@ -394,6 +394,7 @@
             return "";
         }
 
+        // 升級後的核心格局解析：包含小龍與大龍判斷、多重信號交匯與臨界點漸進增強
         function analyzePatternFromSequence(sequence, entityType = 'B_P') {
             let isColor = (entityType === 'RED_BLUE');
             let getItemName = (item) => item === 'RED' ? '紅點' : (item === 'BLUE' ? '藍點' : (item === 'B' ? '莊' : '閒'));
@@ -415,50 +416,111 @@
             let l3 = numCols >= 3 ? colLens[numCols - 3] : 0;
             let l4 = numCols >= 4 ? colLens[numCols - 4] : 0;
 
-            if (curLen >= 4) {
-                return { target: lastItem, confidence: 90, reason: `連續開出 ${curLen} 顆「長龍」達4顆以上，順打上一顆 ${getItemName(lastItem)}` };
+            let signals = [];
+
+            // 1. 小龍與大龍判斷 (Small Dragon vs Big Dragon)
+            if (curLen === 3) {
+                signals.push({ target: lastItem, baseConf: 86, desc: `【小龍】形態 (連開 3 顆)，順打上一顆 ${getItemName(lastItem)}` });
+            } else if (curLen >= 4) {
+                let dragonLevel = curLen >= 6 ? '超級大龍' : '大龍';
+                signals.push({ target: lastItem, baseConf: 91 + Math.min(curLen - 4, 3), desc: `【${dragonLevel}】形態 (連開 ${curLen} 顆)，強勢順打上一顆 ${getItemName(lastItem)}` });
             }
 
+            // 2. 單跳檢測
             let singleCount = 0;
             for (let i = numCols - 1; i >= 0; i--) {
                 if (colLens[i] === 1) singleCount++;
                 else break;
             }
             if (singleCount >= 3) {
-                return { target: oppItem, confidence: 88, reason: `連續 ${singleCount} 次單跳 (1-1-1...)，觸發反打上一顆 ${getItemName(oppItem)}` };
+                signals.push({ target: oppItem, baseConf: 88, desc: `連續 ${singleCount} 次單跳 (1-1-1...)，觸發反打上一顆 ${getItemName(oppItem)}` });
             }
 
+            // 3. 雙跳 2-2-1
             if (numCols >= 3 && l3 === 2 && l2 === 2 && l1 === 1) {
-                return { target: lastItem, confidence: 86, reason: `雙跳格局 2-2-1，預測補齊 ${getItemName(lastItem)}` };
+                signals.push({ target: lastItem, baseConf: 86, desc: `雙跳格局 2-2-1，預測補齊 ${getItemName(lastItem)}` });
             }
 
+            // 4. 房廳格局
             if (numCols >= 3) {
                 if ((l3 === 1 && l2 === 2 && l1 === 1) || (l3 === 2 && l2 === 1 && l1 === 2)) {
-                    return { target: oppItem, confidence: 86, reason: `房廳格局 (${l3}-${l2}-${l1})，觸發反打上一顆 ${getItemName(oppItem)}` };
+                    signals.push({ target: oppItem, baseConf: 86, desc: `房廳格局 (${l3}-${l2}-${l1})，觸發反打上一顆 ${getItemName(oppItem)}` });
                 }
             }
 
+            // 5. 3-2 格局
             if (numCols >= 2 && l2 === 3 && l1 === 2) {
-                return { target: lastItem, confidence: 85, reason: `出現 3-2 格局 (${l2}-${l1})，順打上一顆 ${getItemName(lastItem)}` };
+                signals.push({ target: lastItem, baseConf: 85, desc: `出現 3-2 格局 (${l2}-${l1})，順打上一顆 ${getItemName(lastItem)}` });
             }
 
+            // 6. 3-3-2 格局
             if (numCols >= 3 && l3 === 3 && l2 === 3 && l1 === 2) {
-                return { target: lastItem, confidence: 92, reason: `出現 3-3-2 格局 (${l3}-${l2}-${l1})，順打上一顆 ${getItemName(lastItem)}` };
+                signals.push({ target: lastItem, baseConf: 92, desc: `出現 3-3-2 格局 (${l3}-${l2}-${l1})，順打上一顆 ${getItemName(lastItem)}` });
             }
 
-            return { target: 'NEUTRAL', confidence: 50, reason: '當前無典型強烈規律，建議觀望' };
+            if (signals.length === 0) {
+                return { target: 'NEUTRAL', confidence: 50, reason: '當前無典型強烈規律，建議觀望' };
+            }
+
+            // 多重訊號交匯與漸進增強計算
+            let targetScores = {};
+            let descriptions = [];
+            let totalSignalsCount = signals.length;
+
+            signals.forEach(sig => {
+                if (!targetScores[sig.target]) {
+                    targetScores[sig.target] = { score: 0, count: 0 };
+                }
+                targetScores[sig.target].score += sig.baseConf;
+                targetScores[sig.target].count += 1;
+                descriptions.push(sig.desc);
+            });
+
+            let bestTarget = 'NEUTRAL';
+            let maxScore = 0;
+            let maxCount = 0;
+
+            for (let t in targetScores) {
+                if (targetScores[t].score > maxScore) {
+                    maxScore = targetScores[t].score;
+                    maxCount = targetScores[t].count;
+                    bestTarget = t;
+                }
+            }
+
+            let avgConf = maxScore / maxCount;
+            let multiSignalBoost = totalSignalsCount > 1 ? (totalSignalsCount - 1) * 3 : 0;
+            let finalConf = Math.min(Math.round(avgConf + multiSignalBoost), 98);
+
+            let reasonPrefix = totalSignalsCount > 1 ? `【多重訊號交匯 增強訊號】` : ``;
+            let reasonStr = reasonPrefix + descriptions.join(" ＋ ");
+
+            return { target: bestTarget, confidence: finalConf, reason: reasonStr };
         }
 
+        // 大路形態：納入全部已開出數據並結合全域趨勢容錯加權
         function analyzeBigRoadPatterns(pureHistory, skipBreak = false) {
             let result = analyzePatternFromSequence(pureHistory, 'B_P');
             if (skipBreak && result.target !== 'NEUTRAL' && result.confidence >= 88) {
                 let lastItem = pureHistory[pureHistory.length - 1];
                 return { name: '大路形態 (主路獨立訊號)', target: lastItem, confidence: 75, reason: '【臨界點緩衝保護】上局破路預測未成功，本局暫時依循正常趨勢 1 局' };
             }
+
+            if (result.target !== 'NEUTRAL' && pureHistory.length >= 20) {
+                let bCount = pureHistory.filter(x => x === 'B').length;
+                let pCount = pureHistory.filter(x => x === 'P').length;
+                let dominant = bCount >= pCount ? 'B' : 'P';
+                if (result.target === dominant) {
+                    result.confidence = Math.min(result.confidence + 2, 98);
+                    result.reason += ` ［全域趨勢順向容錯加權］`;
+                }
+            }
+
             let finalReason = result.target !== 'NEUTRAL' ? getStrengthTag(result.confidence) + result.reason : result.reason;
             return { name: '大路形態 (主路獨立訊號)', target: result.target, confidence: result.confidence, reason: finalReason };
         }
 
+        // 下三路分析：納入全部已開出數據進行走勢與容錯分析
         function analyzeDownThreeRoads(pureHistory, offset, roadName, skipBreak = false) {
             let colorSequence = getDownThreeRoadSequence(pureHistory, offset);
             if (colorSequence.length === 0) return { name: roadName, target: 'NEUTRAL', confidence: 50, reason: '走勢轉向次數不足，尚未形成此路' };
@@ -499,7 +561,7 @@
             return { name: roadName, target: ownTarget, confidence: conf, reason: finalReason };
         }
 
-        // 升級更新後的九宮格核心邏輯 (3x3 比例僅計莊閒 + Row 1 & Row 2 觀望)
+        // 盤珠路九宮格核心：3x3 比例僅計莊閒 + Row 1 & Row 2 觀望
         function analyzeNineGridBeadRoad(pureHistory) {
             let grid = [];
             let currentCol = [];
@@ -515,7 +577,6 @@
             let currentRowInCol = grid[numCols - 1] ? grid[numCols - 1].length - 1 : 0;
             let currentColumnIndex = numCols - 1;
 
-            // 規則：Row 1 和 Row 2 不分析進行觀望 (Row 對應 index 0 及 index 1)
             if (currentColumnIndex < 2 || currentRowInCol < 2) {
                 return { 
                     name: '盤珠路九宮格 (全局輔助)', 
@@ -556,7 +617,6 @@
                 return { name: '盤珠路九宮格 (全局輔助)', target: 'NEUTRAL', confidence: 50, reason: '盤珠路有效數據未達 8 顆' };
             }
 
-            // 比例計算：含和局在內的 3x3 結構，但比例只計算莊閒
             let countB = cells.filter(x => x === 'B').length;
             let countP = cells.filter(x => x === 'P').length;
             let totalBP = countB + countP;
