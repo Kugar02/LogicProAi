@@ -254,7 +254,7 @@
 
     <header>
         <h1>百家樂多維路單分析與旗艦預測系統</h1>
-        <p>5 大路單精準分析核心 (支援排排連/房廳判定與臨界破路反打)</p>
+        <p>5 大路單精準分析核心 (標準下三路對位齊腳判定與臨界破路反打)</p>
     </header>
 
     <div class="control-panel">
@@ -416,17 +416,28 @@
 
         function buildRoadMatrix(historyArray) { return buildRoadCols(historyArray); }
 
+        // ★★★ 更新下三路嚴格對位與齊腳邏輯 ★★★
         function getRoadColor(matrix, col, row, offset) {
-            let targetCol = col - offset;
-            if (targetCol < 0) return null;
+            // 在同一列延續（直落）
             if (row > 0) {
-                return matrix[targetCol] && matrix[targetCol][row] !== undefined ? 'RED' : 'BLUE';
-            } else {
-                if (col - 1 < 0 || col - 1 - offset < 0) return null;
-                if (!matrix[col - 1] || !matrix[col - 1 - offset]) return null;
-                let len1 = matrix[col - 1].length;
-                let len2 = matrix[col - 1 - offset].length;
-                return len1 === len2 ? 'RED' : 'BLUE';
+                let targetCol = col - offset;
+                if (targetCol < 0) return null; // 尚未到達對應列
+                let targetLen = matrix[targetCol] ? matrix[targetCol].length : 0;
+                
+                if (row < targetLen) return 'RED';       // 前列有對應紅點 (拍拍黐)
+                if (row === targetLen) return 'BLUE';    // 前列剛好無對應點 (長度不對等)
+                return 'RED';                            // 前列無點且長度更短，長龍直落
+            } 
+            // 換列起點
+            else {
+                let targetCol1 = col - 1;
+                let targetCol2 = col - 1 - offset;
+                if (targetCol2 < 0) return null; // 尚未到達起始位置
+                
+                let len1 = matrix[targetCol1] ? matrix[targetCol1].length : 0;
+                let len2 = matrix[targetCol2] ? matrix[targetCol2].length : 0;
+                
+                return len1 === len2 ? 'RED' : 'BLUE';   // 換列齊腳為紅，不齊為藍
             }
         }
 
@@ -443,7 +454,6 @@
             return colorSequence;
         }
 
-        // ★★★ 更新升級版形態分析（排排連、房廳判定與臨界破路反打） ★★★
         function analyzePatternFromSequence(sequence, entityType = 'B_P') {
             let isColor = (entityType === 'RED_BLUE');
             let getItemName = (item) => item === 'RED' ? '紅點' : (item === 'BLUE' ? '藍點' : (item === 'B' ? '莊' : '閒'));
