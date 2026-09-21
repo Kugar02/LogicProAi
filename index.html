@@ -61,7 +61,15 @@
             gap: 16px;
         }
 
+        /* 輸入區與問路區並排 */
+        .top-action-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
         .direct-input-container {
+            flex: 1.5;
             display: flex;
             flex-direction: column;
             gap: 12px;
@@ -70,6 +78,51 @@
             border-radius: 10px;
             border: 1px solid var(--border-color);
             align-items: center;
+            min-width: 300px;
+        }
+
+        /* 莊閒問路區塊 */
+        .ask-road-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            min-width: 250px;
+            justify-content: center;
+        }
+
+        .ask-road-title {
+            text-align: center;
+            font-size: 0.95rem;
+            color: var(--accent-gold);
+            font-weight: bold;
+            margin-bottom: 12px;
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 6px;
+        }
+
+        .ask-road-grid {
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .ask-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .ask-label { font-size: 0.9rem; font-weight: bold; }
+        .ask-label.banker { color: var(--banker-color); }
+        .ask-label.player { color: var(--player-color); }
+
+        .ask-dots {
+            display: flex;
+            gap: 6px;
         }
 
         .direct-title {
@@ -82,7 +135,6 @@
             display: flex;
             gap: 16px;
             width: 100%;
-            max-width: 600px;
             justify-content: center;
         }
 
@@ -97,6 +149,7 @@
             color: white;
             transition: transform 0.1s, opacity 0.2s;
             box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            max-width: 120px;
         }
 
         .btn-record:active { transform: scale(0.95); }
@@ -155,32 +208,35 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+            background: rgba(0, 0, 0, 0.15);
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px dashed var(--border-color);
         }
 
         .history-title {
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             color: var(--text-muted);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            margin-bottom: 4px;
         }
 
         .history-list {
             display: grid;
             grid-template-rows: repeat(6, auto);
             grid-auto-flow: column;
-            grid-auto-columns: minmax(50px, auto);
+            grid-auto-columns: minmax(45px, auto);
             gap: 8px;
             min-height: 120px;
-            padding: 12px;
-            background-color: rgba(0, 0, 0, 0.3);
-            border-radius: 8px;
-            border: 1px dashed var(--border-color);
             overflow-x: auto;
             align-content: start;
+            padding-bottom: 10px;
         }
 
-        /* 修正為圓形 */
         .badge-box {
             display: flex;
             align-items: center;
@@ -193,10 +249,9 @@
             width: 45px;
             height: 45px;
             min-width: 45px;
-            position: relative; /* 為了定位對錯小圖示 */
+            position: relative;
         }
 
-        /* 預測對錯圖示 */
         .pred-icon {
             position: absolute;
             bottom: -3px;
@@ -217,6 +272,51 @@
         .badge-box-B { background-color: var(--banker-color); }
         .badge-box-P { background-color: var(--player-color); }
         .badge-box-T { background-color: var(--tie-color); }
+
+        /* 下三路繪圖區 */
+        .down-roads-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .down-road-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 6px 12px;
+            border-radius: 6px;
+        }
+
+        .down-road-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            min-width: 60px;
+        }
+
+        .down-road-dots-container {
+            display: flex;
+            gap: 4px;
+            overflow-x: auto;
+            flex: 1;
+            align-items: center;
+            min-height: 24px;
+        }
+
+        .mini-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+
+        /* 為了視覺區分，大眼仔空心、小路實心、曱甴路加斜線 (簡化版：均用顏色實心代表，也可依喜好修改) */
+        .mini-dot.red { background-color: var(--banker-color); box-shadow: 0 0 3px rgba(239, 68, 68, 0.5); }
+        .mini-dot.blue { background-color: var(--player-color); box-shadow: 0 0 3px rgba(59, 130, 246, 0.5); }
+        .mini-dot.empty { background-color: transparent; border: 1px dashed var(--border-color); }
 
         .dashboard {
             display: grid;
@@ -332,16 +432,42 @@
 
     <header>
         <h1>百家樂多維路單分析與旗艦預測系統</h1>
-        <p>6 大路單分析核心 (純賽果快速錄入版)</p>
+        <p>6 大路單分析核心 (含下三路與莊閒問路)</p>
     </header>
 
     <div class="control-panel">
-        <div class="direct-input-container">
-            <span class="direct-title">點擊下方按鈕直接記錄當局開牌結果</span>
-            <div class="btn-input-group">
-                <button class="btn-record btn-player" onclick="recordResult('P')">閒 (P)</button>
-                <button class="btn-record btn-tie" onclick="recordResult('T')">和 (T)</button>
-                <button class="btn-record btn-banker" onclick="recordResult('B')">莊 (B)</button>
+        <div class="top-action-row">
+            <!-- 賽果輸入區 -->
+            <div class="direct-input-container">
+                <span class="direct-title">點擊下方按鈕直接記錄當局開牌結果</span>
+                <div class="btn-input-group">
+                    <button class="btn-record btn-player" onclick="recordResult('P')">閒 (P)</button>
+                    <button class="btn-record btn-tie" onclick="recordResult('T')">和 (T)</button>
+                    <button class="btn-record btn-banker" onclick="recordResult('B')">莊 (B)</button>
+                </div>
+            </div>
+
+            <!-- 莊閒問路區 -->
+            <div class="ask-road-container">
+                <div class="ask-road-title">莊閒問路 (模擬下一局路子顏色)</div>
+                <div class="ask-road-grid">
+                    <div class="ask-col">
+                        <span class="ask-label banker">問莊 (B)</span>
+                        <div class="ask-dots" id="askBankerBox">
+                            <span class="mini-dot empty"></span>
+                            <span class="mini-dot empty"></span>
+                            <span class="mini-dot empty"></span>
+                        </div>
+                    </div>
+                    <div class="ask-col">
+                        <span class="ask-label player">問閒 (P)</span>
+                        <div class="ask-dots" id="askPlayerBox">
+                            <span class="mini-dot empty"></span>
+                            <span class="mini-dot empty"></span>
+                            <span class="mini-dot empty"></span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -357,10 +483,26 @@
 
         <div class="history-container">
             <div class="history-title">
-                <span>當前牌局紀錄（盤珠路：直排 6 格）：</span>
+                <span>主路紀錄（盤珠路直排6格）：</span>
                 <span id="beadCountInfo" style="color:var(--accent-gold); font-weight:bold;">總局數: 0 (有效局數: 0/10)</span>
             </div>
             <div id="historyList" class="history-list"></div>
+            
+            <!-- 下三路圖表區 -->
+            <div class="down-roads-wrapper">
+                <div class="down-road-row">
+                    <span class="down-road-label">大眼仔路</span>
+                    <div id="roadBigEye" class="down-road-dots-container"></div>
+                </div>
+                <div class="down-road-row">
+                    <span class="down-road-label">小路</span>
+                    <div id="roadSmall" class="down-road-dots-container"></div>
+                </div>
+                <div class="down-road-row">
+                    <span class="down-road-label">曱甴路</span>
+                    <div id="roadCockroach" class="down-road-dots-container"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -602,15 +744,12 @@
             return { name: roadName, target: 'NEUTRAL', confidence: 50, reason: `預測開${colorName}，但莊閒試算對稱，無明確指向` };
         }
 
-        // --- 修正後的 盤珠路 3x3 比例邏輯 ---
         function analyzeNineGridBeadRoad(pureHistory) {
-            // 取得最近 9 局作為 3x3 視窗
             let last9 = pureHistory.slice(-9);
             let bCount = last9.filter(x => x === 'B').length;
             let pCount = last9.filter(x => x === 'P').length;
-            let conf = 80; // 預設可信度
+            let conf = 80;
 
-            // 判斷 4:1, 6:2, 5:3 莊閒比例
             if ((bCount === 4 && pCount === 1) || (bCount === 6 && pCount === 2) || (bCount === 5 && pCount === 3)) {
                 return { name: '盤珠路 (3x3比例)', target: 'B', confidence: conf, reason: `近期區塊內觸發 ${bCount}莊:${pCount}閒 比例，順勢推薦莊` };
             }
@@ -629,7 +768,6 @@
             return { name: '三珠路正反雙式', target, confidence: 82, reason: '三珠列第 3 珠：預測齊腳尾號' };
         }
 
-        // 修改為 6 大核心 (刪除單口打法、四珠兩儀)
         function getCoresAnalysis(pureHistory) {
             if (pureHistory.length < 10) {
                 let needed = 10 - pureHistory.length;
@@ -655,7 +793,6 @@
             ];
         }
 
-        // 獨立出最終加權預測邏輯，供歷史統計與 UI 顯示共同使用
         function getFinalPrediction(pureHistory) {
             if (pureHistory.length < 10) return null;
             let cores = getCoresAnalysis(pureHistory);
@@ -685,7 +822,6 @@
                 let purePastHistory = pastHistory.filter(x => x !== 'T');
                 if (purePastHistory.length === 0) continue;
 
-                // 核心勝率統計
                 let cores = getCoresAnalysis(purePastHistory);
                 cores.forEach((res, idx) => {
                     if (res.target !== 'NEUTRAL') {
@@ -695,7 +831,6 @@
                     }
                 });
 
-                // 最終綜合預測統計 (與介面最終預測建議邏輯一致)
                 if (purePastHistory.length >= 10) {
                     let finalPred = getFinalPrediction(purePastHistory);
                     if (finalPred === null) {
@@ -726,17 +861,58 @@
             };
         }
 
+        // --- 莊閒問路模擬函數 ---
+        function simulateAskRoad(pureHistory, target) {
+            let simulated = pureHistory.concat([target]);
+            let bigEyeColor = null, smallColor = null, roachColor = null;
+
+            let seqBigEye = getDownThreeRoadSequence(simulated, 1);
+            if (seqBigEye.length > 0) bigEyeColor = seqBigEye[seqBigEye.length - 1];
+
+            let seqSmall = getDownThreeRoadSequence(simulated, 2);
+            if (seqSmall.length > 0) smallColor = seqSmall[seqSmall.length - 1];
+
+            let seqRoach = getDownThreeRoadSequence(simulated, 3);
+            if (seqRoach.length > 0) roachColor = seqRoach[seqRoach.length - 1];
+
+            return [bigEyeColor, smallColor, roachColor];
+        }
+
+        // --- 渲染下三路點子通用函數 ---
+        function renderRoadDots(containerId, colorSequence) {
+            let container = document.getElementById(containerId);
+            container.innerHTML = "";
+            colorSequence.forEach(color => {
+                let dot = document.createElement("span");
+                dot.className = `mini-dot ${color === 'RED' ? 'red' : 'blue'}`;
+                container.appendChild(dot);
+            });
+            container.scrollLeft = container.scrollWidth;
+        }
+
+        function renderAskRoadDots(containerId, askColors) {
+            let container = document.getElementById(containerId);
+            container.innerHTML = "";
+            askColors.forEach(color => {
+                let dot = document.createElement("span");
+                if (color) {
+                    dot.className = `mini-dot ${color === 'RED' ? 'red' : 'blue'}`;
+                } else {
+                    dot.className = "mini-dot empty";
+                }
+                container.appendChild(dot);
+            });
+        }
+
         function updateUI() {
             let historyContainer = document.getElementById("historyList");
             historyContainer.innerHTML = "";
 
-            // 生成盤路與預測對錯標記
             baccaratHistory.forEach((res, index) => {
                 let badge = document.createElement("div");
                 badge.className = `badge-box badge-box-${res}`;
                 badge.innerText = res === 'B' ? '莊' : (res === 'P' ? '閒' : '和');
 
-                // 判斷並顯示是否預測成功
                 if (index > 0) {
                     let pastHistory = baccaratHistory.slice(0, index).filter(x => x !== 'T');
                     if (pastHistory.length >= 10) {
@@ -745,7 +921,7 @@
                             let icon = document.createElement("span");
                             icon.className = "pred-icon";
                             if (res === 'T') {
-                                icon.innerText = "➖"; // 和局視為退回
+                                icon.innerText = "➖";
                             } else if (pred === res) {
                                 icon.innerText = "✅";
                             } else {
@@ -764,6 +940,17 @@
             let pureCount = pureHistory.length;
             document.getElementById("beadCountInfo").innerText = `總局數: ${baccaratHistory.length} (有效局數: ${pureCount}/10)`;
 
+            // 更新下三路圖表
+            renderRoadDots("roadBigEye", getDownThreeRoadSequence(pureHistory, 1));
+            renderRoadDots("roadSmall", getDownThreeRoadSequence(pureHistory, 2));
+            renderRoadDots("roadCockroach", getDownThreeRoadSequence(pureHistory, 3));
+
+            // 更新莊閒問路
+            let askBankerColors = simulateAskRoad(pureHistory, 'B');
+            let askPlayerColors = simulateAskRoad(pureHistory, 'P');
+            renderAskRoadDots("askBankerBox", askBankerColors);
+            renderAskRoadDots("askPlayerBox", askPlayerColors);
+
             let allStats = calculateAllStats();
             let overallStats = allStats.overall;
 
@@ -781,12 +968,10 @@
             let finalPctElem = document.getElementById("finalPct");
             let finalReasonElem = document.getElementById("finalReason");
 
-            // 將核心結果與統計資料綁定，準備依照勝率排序
             let combinedCores = analysisResults.map((res, idx) => {
                 return { res: res, stat: allStats.cores[idx] };
             });
 
-            // 按照勝率由高至低進行排序
             combinedCores.sort((a, b) => parseFloat(b.stat.rate) - parseFloat(a.stat.rate));
 
             if (pureCount < 10) {
@@ -821,7 +1006,6 @@
                 return;
             }
 
-            // 計算最終建議 (依然統計所有得分，不受 UI 排序影響)
             let bScore = 0, pScore = 0, bVotes = 0, pVotes = 0;
             analysisResults.forEach((res) => {
                 if (res.target === 'B') { bVotes++; bScore += res.confidence; }
