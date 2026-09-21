@@ -50,7 +50,6 @@
             font-size: 0.95rem;
         }
 
-        /* 統一區塊樣式 */
         .panel-container {
             background-color: var(--card-bg);
             padding: 20px;
@@ -93,7 +92,6 @@
         .badge-box-P { background-color: var(--player-color); }
         .badge-box-T { background-color: var(--tie-color); }
 
-        /* 下三路專業矩陣顯示 */
         .down-roads-wrapper { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
         .down-road-row { display: flex; align-items: flex-start; gap: 12px; background: rgba(255, 255, 255, 0.02); padding: 8px 12px; border-radius: 6px; }
         .down-road-label { font-size: 0.85rem; color: var(--text-muted); min-width: 60px; margin-top: 2px; font-weight: bold; }
@@ -112,7 +110,6 @@
         .type-roach .mini-dot.red { background: linear-gradient(45deg, transparent 40%, var(--banker-color) 40%, var(--banker-color) 60%, transparent 60%); border: 1px solid var(--banker-color); }
         .type-roach .mini-dot.blue { background: linear-gradient(45deg, transparent 40%, var(--player-color) 40%, var(--player-color) 60%, transparent 60%); border: 1px solid var(--player-color); }
 
-        /* 莊閒問路區域 */
         .ask-road-container {
             display: flex; flex-direction: column; background: rgba(0, 0, 0, 0.25);
             padding: 16px; border-radius: 10px; border: 1px solid var(--border-color);
@@ -126,7 +123,6 @@
         .ask-label.player { color: var(--player-color); }
         .ask-dots { display: flex; gap: 12px; align-items: center; }
 
-        /* 輸入區樣式 */
         .direct-input-container {
             display: flex; flex-direction: column; gap: 12px; align-items: center; width: 100%;
         }
@@ -189,7 +185,6 @@
         .stat-value.win-count { color: var(--win-color); }
         .stat-value.loss-count { color: var(--loss-color); }
         
-        /* 訊號強弱亮色文字 */
         .sig-high { color: #ef4444; font-weight: bold; }
         .sig-mid { color: #f59e0b; font-weight: bold; }
         .sig-low { color: #3b82f6; font-weight: bold; }
@@ -199,10 +194,9 @@
 
     <header>
         <h1>百家樂多維路單分析與旗艦預測系統</h1>
-        <p>5 大路單核心 (獨立強弱訊號分析 + 70% 信心防禦過濾)</p>
+        <p>5 大路單核心 (升級強弱星數 3-5 星 + 旗艦臨界點防禦過濾)</p>
     </header>
 
-    <!-- 第一層：看路與歷史數據 -->
     <div class="panel-container">
         <div class="history-container">
             <div class="history-title">
@@ -226,7 +220,6 @@
                 </div>
             </div>
 
-            <!-- 莊閒問路 -->
             <div class="ask-road-container">
                 <div class="ask-road-title">莊閒問路 (下一局路子預覽)</div>
                 <div class="ask-road-grid">
@@ -251,7 +244,6 @@
         </div>
     </div>
 
-    <!-- 第二層：輸入控制區域 -->
     <div class="panel-container">
         <div class="direct-input-container">
             <span class="direct-title">點擊下方按鈕直接記錄當局開牌結果，為最終分析提供數據</span>
@@ -273,7 +265,6 @@
         </div>
     </div>
 
-    <!-- 第三層：最終分析數據預測 -->
     <div class="dashboard">
         <div class="final-card">
             <div class="final-title">最終預測建議 (獨立綜合加權決策)</div>
@@ -282,12 +273,9 @@
             <div id="finalReason" class="final-reason">需要至少 10 局有效數據（不含和局）才能啟動模組預測，以提高勝率穩定度。</div>
         </div>
 
-        <div class="analysis-grid" id="analysisGrid">
-            <!-- 5 大核心動態生成 -->
-        </div>
+        <div class="analysis-grid" id="analysisGrid"></div>
     </div>
 
-    <!-- 第四層：實戰統計 -->
     <div class="stats-panel-bottom">
         <div class="stats-panel-title">實戰預測戰績與統計（依照系統最終預測建議）</div>
         <div class="stats-grid">
@@ -399,7 +387,15 @@
             return colorSequence;
         }
 
-        // 極致獨立形態分析 (大路與下三路共用，單純看形態，取消專屬九宮格)
+        // 3-5星 強弱標籤修正
+        function getStrengthTag(conf) {
+            if (conf >= 90) return `<span class="sig-high">【訊號極強 ★★★★★】</span> `;
+            if (conf >= 80) return `<span class="sig-mid">【訊號強烈 ★★★★☆】</span> `;
+            if (conf >= 70) return `<span class="sig-low">【訊號偏強 ★★★☆☆】</span> `;
+            return "";
+        }
+
+        // 核心形態分析（包含長龍、單跳、雙跳、房廳、3-2、3-3-2 邏輯）
         function analyzePatternFromSequence(sequence, entityType = 'B_P') {
             let isColor = (entityType === 'RED_BLUE');
             let getItemName = (item) => item === 'RED' ? '紅點' : (item === 'BLUE' ? '藍點' : (item === 'B' ? '莊' : '閒'));
@@ -421,76 +417,58 @@
             let l3 = numCols >= 3 ? colLens[numCols - 3] : 0;
             let l4 = numCols >= 4 ? colLens[numCols - 4] : 0;
 
-            // 1. 長龍與高敏臨界反打 (下調極值至 6)
-            if (curLen >= 3) {
-                if (curLen >= 6) return { target: oppItem, confidence: 92, reason: `連續 ${curLen} 次 ${getItemName(lastItem)} 達極限紅線，高敏觸發【強制反打/破路】` };
-                let conf = 80 + (curLen - 3) * 4; // 3->80, 4->84, 5->88
-                return { target: lastItem, confidence: Math.min(90, conf), reason: `連續 ${curLen} 次 ${getItemName(lastItem)}「長龍」成形，高置信度順勢跟進` };
+            // 1. 長龍：連續開出4顆之後順打上一顆
+            if (curLen >= 4) {
+                return { target: lastItem, confidence: 90, reason: `連續開出 ${curLen} 顆「長龍」達4顆以上，順打上一顆 ${getItemName(lastItem)}` };
             }
 
-            // 2. 單跳與高敏臨界反打 (下調極值至 6)
-            if (numCols >= 4 && colLens.slice(-4).every(len => len === 1)) {
-                let jumpCount = 0;
-                for (let i = numCols - 1; i >= 0; i--) { if (colLens[i] === 1) jumpCount++; else break; }
-                if (jumpCount >= 6) return { target: lastItem, confidence: 92, reason: `連續 ${jumpCount} 次單跳達極值警戒線，高敏觸發【防斷/直落】` };
-                let conf = 80 + (jumpCount - 4) * 4; // 4->80, 5->84
-                return { target: oppItem, confidence: Math.min(88, conf), reason: `連續 ${jumpCount} 次單跳，底層結構極穩，預測持續單跳切換` };
+            // 2. 單跳：1-1-1... 反打上一顆
+            let singleCount = 0;
+            for (let i = numCols - 1; i >= 0; i--) {
+                if (colLens[i] === 1) singleCount++;
+                else break;
+            }
+            if (singleCount >= 3) {
+                return { target: oppItem, confidence: 88, reason: `連續 ${singleCount} 次單跳 (1-1-1...)，觸發反打上一顆 ${getItemName(oppItem)}` };
             }
 
-            // 3. 房廳格局嚴格判定
-            if (numCols >= 4) {
-                if (l4 === 1 && l3 === 2 && l2 === 1) {
-                    if (l1 === 1) return { target: lastItem, confidence: 85, reason: `「一房二廳」明確格局 (${l4}-${l3}-${l2}-${l1})，預測直落補齊至 2` };
-                    if (l1 === 2) {
-                        if (numCols >= 6 && colLens[numCols-5] === 2 && colLens[numCols-6] === 1) return { target: lastItem, confidence: 92, reason: `「一房二廳」連續完美重複達臨界，高敏啟動【破路反打】` };
-                        return { target: oppItem, confidence: 86, reason: `「一房二廳」格局齊腳滿路 (${l4}-${l3}-${l2}-${l1})，預測轉向切換` };
-                    }
-                }
-                if (l4 === 2 && l3 === 1 && l2 === 2 && l1 === 1) {
-                    if (numCols >= 6 && colLens[numCols-5] === 1 && colLens[numCols-6] === 2) return { target: lastItem, confidence: 92, reason: `「二房一廳」連續出現達極值，高敏啟動【破路直落】` };
-                    return { target: oppItem, confidence: 86, reason: `「二房一廳」格局完美齊腳 (${l4}-${l3}-${l2}-${l1})，預測轉向開新列` };
-                }
+            // 3. 雙跳：2-2-1 補齊
+            if (numCols >= 3 && l3 === 2 && l2 === 2 && l1 === 1) {
+                return { target: lastItem, confidence: 86, reason: `雙跳格局 2-2-1，預測補齊 ${getItemName(lastItem)}` };
             }
 
-            // 4. 雙跳極致破路
+            // 4. 房廳：1-2-1 或 2-1-2 反打上一顆
             if (numCols >= 3) {
-                if (l3 === 2 && l2 === 2 && l1 === 1) return { target: lastItem, confidence: 88, reason: `標準雙跳過渡期 (${l3}-${l2}-${l1})，極高機率補齊雙位` };
-                if (l3 === 2 && l2 === 2 && l1 === 2) {
-                    if (numCols >= 4 && l4 === 2) return { target: lastItem, confidence: 92, reason: `連續4列完美雙跳 (${l4}-${l3}-${l2}-${l1}) 達臨界，啟動【高敏破路突破】` };
-                    return { target: oppItem, confidence: 88, reason: `完美「雙跳」格局齊腳 (${l3}-${l2}-${l1})，建議精準轉向` };
+                if ((l3 === 1 && l2 === 2 && l1 === 1) || (l3 === 2 && l2 === 1 && l1 === 2)) {
+                    return { target: oppItem, confidence: 86, reason: `房廳格局 (${l3}-${l2}-${l1})，觸發反打上一顆 ${getItemName(oppItem)}` };
                 }
             }
 
-            // 5. 排排連
-            if (numCols >= 3) {
-                if (l2 >= 3 && l3 >= 3 && Math.abs(l2 - l3) <= 1) {
-                    if (l1 < l2) return { target: lastItem, confidence: 82, reason: `「排排連」厚路勢能強烈 (${l3}-${l2}-${l1})，預測補齊高度 (${l2})` };
-                    else if (l1 === l2) {
-                        if (numCols >= 4 && l4 >= 3 && Math.abs(l3 - l4) <= 1) return { target: lastItem, confidence: 90, reason: `「排排連」多次齊腳觸頂，啟動【破路直落】` };
-                        return { target: oppItem, confidence: 84, reason: `「排排連」高度已滿齊腳 (${l2})，依照規律預測轉向` };
-                    }
-                }
+            // 5. 新增邏輯：3-2 順打上一顆
+            if (numCols >= 2 && l2 === 3 && l1 === 2) {
+                return { target: lastItem, confidence: 85, reason: `出現 3-2 格局 (${l2}-${l1})，順打上一顆 ${getItemName(lastItem)}` };
             }
 
-            return { target: 'NEUTRAL', confidence: 50, reason: '當前無典型強烈規律，獨立盤面震盪，建議觀望' };
+            // 6. 新增邏輯：3-3-2 順打上一顆
+            if (numCols >= 3 && l3 === 3 && l2 === 3 && l1 === 2) {
+                return { target: lastItem, confidence: 92, reason: `出現 3-3-2 格局 (${l3}-${l2}-${l1})，順打上一顆 ${getItemName(lastItem)}` };
+            }
+
+            return { target: 'NEUTRAL', confidence: 50, reason: '當前無典型強烈規律，建議觀望' };
         }
 
-        // 獨立標記訊號強弱標籤
-        function getStrengthTag(conf) {
-            if (conf >= 90) return `<span class="sig-high">【訊號極強 ★★★】</span> `;
-            if (conf >= 80) return `<span class="sig-mid">【訊號強烈 ★★☆】</span> `;
-            if (conf >= 70) return `<span class="sig-low">【訊號偏強 ★☆☆】</span> `;
-            return "";
-        }
-
-        function analyzeBigRoadPatterns(pureHistory) {
+        function analyzeBigRoadPatterns(pureHistory, skipBreak = false) {
             let result = analyzePatternFromSequence(pureHistory, 'B_P');
+            if (skipBreak && result.target !== 'NEUTRAL' && result.confidence >= 88) {
+                // 如果上局臨界點破路預測失敗，本局先跟隨正常趨勢 1 局
+                let lastItem = pureHistory[pureHistory.length - 1];
+                return { name: '大路形態 (主路獨立訊號)', target: lastItem, confidence: 75, reason: '【臨界點緩衝保護】上局破路預測未成功，本局暫時依循正常趨勢 1 局' };
+            }
             let finalReason = result.target !== 'NEUTRAL' ? getStrengthTag(result.confidence) + result.reason : result.reason;
             return { name: '大路形態 (主路獨立訊號)', target: result.target, confidence: result.confidence, reason: finalReason };
         }
 
-        // 下三路分析 (移除與大路交叉判定的邏輯，回歸獨立判斷)
-        function analyzeDownThreeRoads(pureHistory, offset, roadName) {
+        function analyzeDownThreeRoads(pureHistory, offset, roadName, skipBreak = false) {
             let colorSequence = getDownThreeRoadSequence(pureHistory, offset);
             if (colorSequence.length === 0) return { name: roadName, target: 'NEUTRAL', confidence: 50, reason: '走勢轉向次數不足，尚未形成此路' };
             
@@ -521,75 +499,144 @@
                 return { name: roadName, target: 'NEUTRAL', confidence: 50, reason: `預測開【${colorName}】，但莊閒雙方試算結果對稱，失去方向性指標` };
             }
 
-            let finalReason = getStrengthTag(conf) + patternAnalysis.reason + ' ➔ ' + reasonStr;
+            if (skipBreak && conf >= 88) {
+                let lastItem = pureHistory[pureHistory.length - 1];
+                return { name: roadName, target: lastItem, confidence: 75, reason: `【臨界點緩衝保護】上局破路預測未成功，本局依循正常趨勢 1 局` };
+            }
 
+            let finalReason = getStrengthTag(conf) + patternAnalysis.reason + ' ➔ ' + reasonStr;
             return { name: roadName, target: ownTarget, confidence: conf, reason: finalReason };
         }
 
-        // 獨立第 5 核心：高敏盤珠路九宮格勢能 (依然保留作為全局輔助指標)
+        // 修正後的九宮格核心邏輯 (3x3 滑動視窗 + 比例判定 + Row 6 反打)
         function analyzeNineGridBeadRoad(pureHistory) {
+            if (pureHistory.length < 8) {
+                return { name: '盤珠路九宮格 (全局輔助)', target: 'NEUTRAL', confidence: 50, reason: '盤珠路有效局數不足 8 局，無法啟動九宮格分析' };
+            }
+
+            let grid = [];
+            let currentCol = [];
+            for (let i = 0; i < pureHistory.length; i++) {
+                currentCol.push(pureHistory[i]);
+                if (currentCol.length === 6 || i === pureHistory.length - 1) {
+                    grid.push([...currentCol]);
+                    currentCol = [];
+                }
+            }
+
+            let bestWindow = null;
+            for (let c = 0; c <= grid.length - 3; c++) {
+                for (let r = 0; r <= 3; r++) {
+                    let filledCount = 0;
+                    for (let dc = 0; dc < 3; dc++) {
+                        for (let dr = 0; dr < 3; dr++) {
+                            if (grid[c + dc] && grid[c + dc][r + dr]) filledCount++;
+                        }
+                    }
+                    if (filledCount >= 8) {
+                        bestWindow = { c, r };
+                    }
+                }
+            }
+
+            let cells = [];
+            if (bestWindow) {
+                for (let dc = 0; dc < 3; dc++) {
+                    for (let dr = 0; dr < 3; dr++) {
+                        let val = grid[bestWindow.c + dc] ? grid[bestWindow.c + dc][bestWindow.r + dr] : null;
+                        if (val) cells.push(val);
+                    }
+                }
+            } else {
+                cells = pureHistory.slice(-9);
+            }
+
+            if (cells.length < 8) {
+                return { name: '盤珠路九宮格 (全局輔助)', target: 'NEUTRAL', confidence: 50, reason: '九宮格有效數據未達 8 顆' };
+            }
+
+            let countB = cells.filter(x => x === 'B').length;
+            let countP = cells.filter(x => x === 'P').length;
+            let diff = Math.abs(countB - countP);
+
+            // 莊閒差距超過 2 顆才成為「比例」
+            if (diff <= 2) {
+                return { name: '盤珠路九宮格 (全局輔助)', target: 'NEUTRAL', confidence: 50, reason: `九宮格內莊:${countB} 閒:${countP}，差距 (${diff}) ≤ 2，無明確比例，觀望` };
+            }
+
+            let majority = countB > countP ? 'B' : 'P';
+            let minority = countB > countP ? 'P' : 'B';
+            let ratioStr = `${countB}莊:${countP}閒`;
+
             let globalB = pureHistory.filter(x => x === 'B').length;
             let globalP = pureHistory.filter(x => x === 'P').length;
             let globalDiff = Math.abs(globalB - globalP);
 
-            let last8 = pureHistory.slice(-8);
-            let b8 = last8.filter(x => x === 'B').length;
-            let p8 = last8.filter(x => x === 'P').length;
+            let target = 'NEUTRAL';
+            let reasonStr = "";
 
-            let last5 = pureHistory.slice(-5);
-            let b5 = last5.filter(x => x === 'B').length;
-            let p5 = last5.filter(x => x === 'P').length;
-
-            let isMatch = false, majority = null, minority = null, ratioStr = "";
-
-            if (b8 === 8 || b8 === 7) { isMatch = true; majority = 'B'; minority = 'P'; ratioStr = `${b8}莊:${8-b8}閒`; }
-            else if (p8 === 8 || p8 === 7) { isMatch = true; majority = 'P'; minority = 'B'; ratioStr = `${p8}閒:${8-p8}莊`; }
-            else if (b8 === 6) { isMatch = true; majority = 'B'; minority = 'P'; ratioStr = `6莊:2閒`; }
-            else if (p8 === 6) { isMatch = true; majority = 'P'; minority = 'B'; ratioStr = `6閒:2莊`; }
-            else if (b8 === 5) { isMatch = true; majority = 'B'; minority = 'P'; ratioStr = `5莊:3閒`; }
-            else if (p8 === 5) { isMatch = true; majority = 'P'; minority = 'B'; ratioStr = `5閒:3莊`; }
-            else if (b5 === 4) { isMatch = true; majority = 'B'; minority = 'P'; ratioStr = `4莊:1閒`; }
-            else if (p5 === 4) { isMatch = true; majority = 'P'; minority = 'B'; ratioStr = `4閒:1莊`; }
-
-            if (isMatch) {
-                if (globalDiff <= 4) {
-                    let conf = 85;
-                    return { name: '盤珠路九宮格 (全局輔助)', target: majority, confidence: conf, reason: getStrengthTag(conf) + `局勢指標 ${ratioStr}，全局差(${globalDiff})≤4，強勢順打` };
-                } else {
-                    let conf = 92;
-                    return { name: '盤珠路九宮格 (全局輔助)', target: minority, confidence: conf, reason: getStrengthTag(conf) + `局勢指標 ${ratioStr}，全局差(${globalDiff})嚴重失衡，高敏觸發【均值反打】` };
-                }
+            // 全局已開出莊閒比例差距較少 正負2局內 推薦「比例」較少；超過正負2局則推薦「比例」較多
+            if (globalDiff <= 2) {
+                target = minority;
+                reasonStr = `九宮格形成比例 (${ratioStr})，全局差 (${globalDiff}) ≤ 2 (差距較少)，推薦【比例較少】 (${minority === 'B' ? '莊' : '閒'})`;
+            } else {
+                target = majority;
+                reasonStr = `九宮格形成比例 (${ratioStr})，全局差 (${globalDiff}) > 2 (差距較多)，推薦【比例較多】 (${majority === 'B' ? '莊' : '閒'})`;
             }
 
-            return { name: '盤珠路九宮格 (全局輔助)', target: 'NEUTRAL', confidence: 50, reason: `近期 3x3 區塊比例未達極端觸發條件` };
+            // 若落在盤珠路第 6 Row，進行反打操作
+            let currentGridCol = grid.length - 1;
+            let currentRowInCol = grid[currentGridCol] ? grid[currentGridCol].length - 1 : 0;
+            if (currentRowInCol === 5 && target !== 'NEUTRAL') {
+                target = target === 'B' ? 'P' : 'B';
+                reasonStr += ` ➔ 觸及盤珠路第 6 Row，執行【反打】操作！`;
+            }
+
+            let conf = 88;
+            return { name: '盤珠路九宮格 (全局輔助)', target: target, confidence: conf, reason: getStrengthTag(conf) + reasonStr };
         }
 
-        function getCoresAnalysis(pureHistory) {
+        // 檢查上一局破路/反打預測是否失敗（用於實現緩衝保護）
+        function checkPreviousBreakFailure(pureHistory, coreIndex) {
+            if (pureHistory.length < 11) return false;
+            let pastHistory = pureHistory.slice(0, -1);
+            let actualNext = pureHistory[pureHistory.length - 1];
+            
+            let pastCores = getCoresAnalysisInternal(pastHistory, true);
+            let pastRes = pastCores[coreIndex];
+            if (pastRes && pastRes.confidence >= 88 && pastRes.target !== 'NEUTRAL' && pastRes.target !== actualNext) {
+                return true; // 上局高信賴臨界點預測失敗
+            }
+            return false;
+        }
+
+        function getCoresAnalysisInternal(pureHistory, isInternal = false) {
             if (pureHistory.length < 10) {
-                let needed = 10 - pureHistory.length;
                 let reasonStr = `有效牌局未達 10 局門檻 (當前 ${pureHistory.length}/10)，保持觀望`;
-                return [
-                    { name: '大路形態 (主路獨立訊號)', target: 'NEUTRAL', confidence: 50, reason: reasonStr },
-                    { name: '下三路 (大眼仔)', target: 'NEUTRAL', confidence: 50, reason: reasonStr },
-                    { name: '下三路 (小路)', target: 'NEUTRAL', confidence: 50, reason: reasonStr },
-                    { name: '下三路 (曱甴路)', target: 'NEUTRAL', confidence: 50, reason: reasonStr },
-                    { name: '盤珠路九宮格 (全局輔助)', target: 'NEUTRAL', confidence: 50, reason: reasonStr }
-                ];
+                return Array(5).fill(null).map((_, idx) => ({
+                    name: ['大路形態 (主路獨立訊號)', '下三路 (大眼仔獨立訊號)', '下三路 (小路獨立訊號)', '下三路 (曱甴路獨立訊號)', '盤珠路九宮格 (全局輔助)'][idx],
+                    target: 'NEUTRAL', confidence: 50, reason: reasonStr
+                }));
             }
 
-            let bigRoadRes = analyzeBigRoadPatterns(pureHistory);
-            
-            // 獨立調用下三路分析，無大路交叉參數
-            let res1 = analyzeDownThreeRoads(pureHistory, 1, '下三路 (大眼仔獨立訊號)');
-            let res2 = analyzeDownThreeRoads(pureHistory, 2, '下三路 (小路獨立訊號)');
-            let res3 = analyzeDownThreeRoads(pureHistory, 3, '下三路 (曱甴路獨立訊號)');
-            
+            let skip0 = !isInternal && checkPreviousBreakFailure(pureHistory, 0);
+            let skip1 = !isInternal && checkPreviousBreakFailure(pureHistory, 1);
+            let skip2 = !isInternal && checkPreviousBreakFailure(pureHistory, 2);
+            let skip3 = !isInternal && checkPreviousBreakFailure(pureHistory, 3);
+
+            let bigRoadRes = analyzeBigRoadPatterns(pureHistory, skip0);
+            let res1 = analyzeDownThreeRoads(pureHistory, 1, '下三路 (大眼仔獨立訊號)', skip1);
+            let res2 = analyzeDownThreeRoads(pureHistory, 2, '下三路 (小路獨立訊號)', skip2);
+            let res3 = analyzeDownThreeRoads(pureHistory, 3, '下三路 (曱甴路獨立訊號)', skip3);
             let res4 = analyzeNineGridBeadRoad(pureHistory);
 
             return [bigRoadRes, res1, res2, res3, res4];
         }
 
-        // 修改：小於 70% 信心水準的預測，不再納入最終預測投票
+        function getCoresAnalysis(pureHistory) {
+            return getCoresAnalysisInternal(pureHistory, false);
+        }
+
         function getFinalPrediction(pureHistory) {
             if (pureHistory.length < 10) return null;
             let cores = getCoresAnalysis(pureHistory);
@@ -618,7 +665,6 @@
 
                 let cores = getCoresAnalysis(purePastHistory);
                 cores.forEach((res, idx) => {
-                    // 只統計信心度 >= 70% 的情況
                     if (res.target !== 'NEUTRAL' && res.confidence >= 70) {
                         coreStats[idx].total++;
                         if (res.target === actualResult) coreStats[idx].win++;
@@ -746,7 +792,6 @@
             let finalPctElem = document.getElementById("finalPct");
             let finalReasonElem = document.getElementById("finalReason");
 
-            // 固定陣列順序顯示 (大路 -> 大眼仔 -> 小路 -> 曱甴 -> 九宮格)
             let combinedCores = analysisResults.map((res, idx) => ({ res: res, stat: allStats.cores[idx] }));
 
             if (pureCount < 10) {
@@ -761,8 +806,7 @@
                     let hitRateText = `勝率 ${cStat.rate}% (${cStat.win}勝/${cStat.loss}負)`;
                     let targetText = res.target === 'B' ? '莊 (B)' : (res.target === 'P' ? '閒 (P)' : '觀望');
                     let tagClass = res.target === 'B' ? 'tag-B' : (res.target === 'P' ? 'tag-P' : 'tag-N');
-                    
-                    let confHtml = res.target === 'NEUTRAL' ? `<span class="card-conf">可信度 --%</span>` : `<span class="card-conf">可信度 ${res.confidence}%</span>`;
+                    let confHtml = `<span class="card-conf">可信度 ${res.confidence}%</span>`;
 
                     let card = document.createElement("div");
                     card.className = "analysis-card";
@@ -782,7 +826,6 @@
                 return;
             }
 
-            // 僅計算達 70% 門檻的核心
             let bScore = 0, pScore = 0, bVotes = 0, pVotes = 0, validCores = 0;
             analysisResults.forEach((res) => {
                 if (res.target !== 'NEUTRAL' && res.confidence >= 70) {
@@ -829,7 +872,7 @@
                 finalTargetElem.innerText = "觀望";
                 finalTargetElem.className = "final-target target-N";
                 finalPctElem.innerText = "綜合可信度 50.00%";
-                finalReasonElem.innerText = "所有 5 大分析模組均呈現觀望或可信度不足 70%，已強制過濾，建議不下注。";
+                finalReasonElem.innerText = "所有核心模組均呈現觀望或可信度不足 70%，已強制過濾，建議不下注。";
             } else {
                 let winningTarget = bScore >= pScore ? 'B' : 'P';
                 let winVotes = winningTarget === 'B' ? bVotes : pVotes;
@@ -848,7 +891,7 @@
                 }
 
                 finalPctElem.innerText = `綜合可信度 ${finalConfidence}%`;
-                finalReasonElem.innerText = `已達 10 局分析門檻。共 5 個核心中，有 ${validCores} 個達到 70% 防禦門檻，其中 ${winVotes} 個強力指向 ${winningTarget === 'B' ? '莊' : '閒'} (莊總權重 ${bScore} / 閒總權重 ${pScore})。`;
+                finalReasonElem.innerText = `已達 10 局分析門檻。共 5 個核心中，有 ${validCores} 個達到 70% 防禦門檻，其中 ${winVotes} 個強力指向 ${winningTarget === 'B' ? '莊' : '閒'}。`;
             }
         }
 
