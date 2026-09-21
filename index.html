@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>百家樂多維路單分析與旗艦預測系統 (九宮格比例重構版)</title>
+    <title>百家樂多維路單分析與旗艦預測系統 (破路機制獨立重構版)</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -174,23 +174,31 @@
         .tag-P { background-color: rgba(59, 130, 246, 0.2); color: var(--player-color); }
         .tag-N { background-color: rgba(148, 163, 184, 0.2); color: var(--text-muted); }
         
-        .card-break-tag {
+        .section-box {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .section-title {
             font-size: 0.8rem;
             color: var(--accent-gold);
-            background: rgba(245, 158, 11, 0.1);
-            border: 1px dashed rgba(245, 158, 11, 0.3);
-            padding: 5px 8px;
-            border-radius: 6px;
-            margin-top: 2px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .section-content {
+            font-size: 0.83rem;
+            color: var(--text-muted);
             line-height: 1.35;
         }
-        .card-break-tag.active {
-            color: #f43f5e;
-            background: rgba(244, 63, 94, 0.15);
-            border: 1px dashed rgba(244, 63, 94, 0.4);
-            font-weight: bold;
-        }
-        .card-reason { font-size: 0.85rem; color: var(--text-muted); line-height: 1.35; }
+        .mech-high { color: #f43f5e; font-weight: bold; }
+        .mech-mid { color: #f59e0b; font-weight: bold; }
+        .mech-low { color: #10b981; font-weight: bold; }
 
         .stats-panel-bottom { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-top: 12px; }
         .stats-panel-title { font-size: 1rem; color: var(--accent-gold); font-weight: bold; margin-bottom: 14px; text-align: center; }
@@ -211,7 +219,7 @@
 
     <header>
         <h1>百家樂多維路單分析與旗艦預測系統</h1>
-        <p>九宮格 3x3 比例重構與 Row 6 反打升級版</p>
+        <p>獨立 4 核心「破路/反打機制」與九宮格比例重構版</p>
     </header>
 
     <div class="panel-container">
@@ -411,127 +419,95 @@
             return "";
         }
 
-        // 核心格局解析：分離「常規趨勢方向」與「破路/反打臨界點信號」
-        function analyzePatternFromSequence(sequence, entityType = 'B_P') {
-            let isColor = (entityType === 'RED_BLUE');
+        // ==========================================
+        // 全新獨立系統：破路/反打機制 (分析連續性過高與斷連概率)
+        // ==========================================
+        function analyzeBreakMechanism(sequence, isColor = false) {
             let getItemName = (item) => item === 'RED' ? '紅點' : (item === 'BLUE' ? '藍點' : (item === 'B' ? '莊' : '閒'));
-
-            if (!sequence || sequence.length < 3) return { target: 'NEUTRAL', confidence: 50, reason: '數據不足，無法判定獨立格局', hasBreakSignal: false, breakDesc: '【常規方向】無破路觸發' };
+            if (!sequence || sequence.length < 3) {
+                return { antiValue: 0, levelText: '<span class="mech-low">穩定 (低臨界值)</span>', reason: '數據尚少，走勢連續性平穩，無斷連風險。' };
+            }
 
             let matrix = buildRoadMatrix(sequence);
             let numCols = matrix.length;
-            if (numCols === 0) return { target: 'NEUTRAL', confidence: 50, reason: '無有效數據', hasBreakSignal: false, breakDesc: '【常規方向】無破路觸發' };
+            if (numCols === 0) return { antiValue: 0, levelText: '<span class="mech-low">穩定 (低臨界值)</span>', reason: '無有效矩陣數據。' };
 
             let colLens = matrix.map(col => col.length);
-            let curCol = matrix[numCols - 1];
-            let curLen = curCol.length;
-            let lastItem = sequence[sequence.length - 1];
-            let oppItem = isColor ? (lastItem === 'RED' ? 'BLUE' : 'RED') : (lastItem === 'B' ? 'P' : 'B');
+            let curLen = colLens[numCols - 1];
 
-            let l1 = numCols >= 1 ? colLens[numCols - 1] : 0;
-            let l2 = numCols >= 2 ? colLens[numCols - 2] : 0;
-            let l3 = numCols >= 3 ? colLens[numCols - 3] : 0;
-            let l4 = numCols >= 4 ? colLens[numCols - 4] : 0;
-
-            let normalTarget = lastItem;
-            let normalConf = 75;
-            let normalReason = `【常規趨勢順打】依循當前連開趨勢預測 ${getItemName(lastItem)}`;
-
-            if (curLen === 3) {
-                normalTarget = lastItem;
-                normalConf = 85;
-                normalReason = `【小龍形態】(連開 3 顆)，順打上一顆 ${getItemName(lastItem)}`;
-            } else if (curLen >= 4) {
-                let dragonLevel = curLen >= 6 ? '超級大龍' : '大龍';
-                normalTarget = lastItem;
-                normalConf = 90 + Math.min(curLen - 4, 5);
-                normalReason = `【${dragonLevel}】(連開 ${curLen} 顆)，強勢順打上一顆 ${getItemName(lastItem)}`;
-            } else if (numCols >= 3 && l3 === 2 && l2 === 2 && l1 === 1) {
-                normalTarget = lastItem;
-                normalConf = 84;
-                normalReason = `【雙跳 2-2-1】格局，預測補齊 ${getItemName(lastItem)}`;
-            } else if (numCols >= 2 && l2 === 3 && l1 === 2) {
-                normalTarget = lastItem;
-                normalConf = 83;
-                normalReason = `【3-2】格局，順打上一顆 ${getItemName(lastItem)}`;
-            } else if (numCols >= 3 && l3 === 3 && l2 === 3 && l1 === 2) {
-                normalTarget = lastItem;
-                normalConf = 90;
-                normalReason = `【3-3-2】格局，順打上一顆 ${getItemName(lastItem)}`;
-            }
-
-            let breakSignals = [];
-            let hasBreak = false;
-
+            // 計算連續單跳次數
             let singleCount = 0;
             for (let i = numCols - 1; i >= 0; i--) {
                 if (colLens[i] === 1) singleCount++;
                 else break;
             }
-            if (singleCount >= 5) {
-                hasBreak = true;
-                breakSignals.push({ target: oppItem, confBoost: 14, desc: `【臨界點】連續 ${singleCount} 次單跳過多，觸發反打上一顆 ${getItemName(oppItem)}` });
+
+            let antiValue = 10;
+            let levelText = '<span class="mech-low">平穩 (低臨界值)</span>';
+            let reasonStr = '當前走勢連續性正常，未出現過度延續。';
+
+            if (curLen >= 6) {
+                antiValue = 90;
+                levelText = '<span class="mech-high">極高危 (極強臨界值)</span>';
+                reasonStr = `當前長龍已連續開出 ${curLen} 顆，數據連續性極高，斷連概率大增！`;
+            } else if (curLen === 5) {
+                antiValue = 78;
+                levelText = '<span class="mech-high">偏高 (強臨界值)</span>';
+                reasonStr = `當前走勢連續 ${curLen} 顆，接近過度延續邊緣，慎防斷連。`;
+            } else if (curLen === 4) {
+                antiValue = 60;
+                levelText = '<span class="mech-mid">中等 (中臨界值)</span>';
+                reasonStr = `當前連開 4 顆，連續性開始增強，需留意反轉。`;
+            } else if (singleCount >= 5) {
+                antiValue = 85;
+                levelText = '<span class="mech-high">極高危 (極強臨界值)</span>';
+                reasonStr = `連續 ${singleCount} 次單跳交替，跳路連續性過高，極易破路！`;
             } else if (singleCount === 4) {
-                hasBreak = true;
-                breakSignals.push({ target: oppItem, confBoost: 10, desc: `【警戒】連續 4 次單跳，留意反打 ${getItemName(oppItem)}` });
+                antiValue = 65;
+                levelText = '<span class="mech-mid">偏高 (強臨界值)</span>';
+                reasonStr = `連續 4 次單跳，跳動頻率過高，具備反打潛在風險。`;
             }
 
-            let isRoomPattern = false;
-            if (numCols >= 4 && l4 === 1 && l3 === 2 && l2 === 1 && l1 === 2) isRoomPattern = true;
-            if (numCols >= 4 && l4 === 2 && l3 === 1 && l2 === 2 && l1 === 1) isRoomPattern = true;
-            if (numCols >= 3 && l3 === 1 && l2 === 2 && l1 === 1) isRoomPattern = true;
-            if (numCols >= 3 && l3 === 2 && l2 === 1 && l1 === 2) isRoomPattern = true;
-
-            if (isRoomPattern) {
-                hasBreak = true;
-                breakSignals.push({ target: oppItem, confBoost: 12, desc: `【破路信號】偵測到房廳交替形態（如 1-2-1-2 或 2-1-2-1），觸發反打上一顆 ${getItemName(oppItem)}` });
-            }
-
-            if (numCols >= 3 && l3 === 1 && l2 === 3 && l1 === 1) {
-                hasBreak = true;
-                breakSignals.push({ target: oppItem, confBoost: 13, desc: `【破路信號】出現 1-3-1 核心格局，觸發反打上一顆 ${getItemName(oppItem)}` });
-            }
-            if (numCols >= 3 && l3 === 3 && l2 === 1 && l1 === 3) {
-                hasBreak = true;
-                breakSignals.push({ target: oppItem, confBoost: 14, desc: `【破路信號】出現 3-1-3 核心格局，觸發反打上一顆 ${getItemName(oppItem)}` });
-            }
-
-            let finalTarget = normalTarget;
-            let finalConf = normalConf;
-            let finalReason = normalReason;
-            let breakDescStr = "【常規方向】無破路反打觸發，依循趨勢";
-
-            if (hasBreak && breakSignals.length > 0) {
-                let latestBreak = breakSignals[breakSignals.length - 1];
-                finalTarget = latestBreak.target;
-                finalConf = Math.min(normalConf + latestBreak.confBoost, 98);
-                finalReason = `【破路信號介入】原常規指向 ${getItemName(normalTarget)}，但因 ${latestBreak.desc}，強勢反打修正為【${getItemName(finalTarget)}】！`;
-                breakDescStr = breakSignals.map(s => s.desc).join(" / ");
-            }
-
-            return { target: finalTarget, confidence: finalConf, reason: getStrengthTag(finalConf) + finalReason, hasBreakSignal: hasBreak, breakDesc: breakDescStr };
+            return { antiValue, levelText, reason: reasonStr };
         }
 
-        function analyzeBigRoadPatterns(pureHistory, skipBreak = false) {
-            let result = analyzePatternFromSequence(pureHistory, 'B_P');
-            if (skipBreak && result.target !== 'NEUTRAL' && result.confidence >= 88) {
-                let lastItem = pureHistory[pureHistory.length - 1];
-                return { name: '大路形態 (主路獨立訊號)', target: lastItem, confidence: 75, reason: '【臨界點緩衝保護】上局破路預測未成功，本局暫時依循正常趨勢 1 局', breakDesc: '【緩衝保護中】暫停破路反打' };
+        // 核心邏輯 1：大路形態分析 (整合破路/反打機制)
+        function analyzeBigRoadPatterns(pureHistory) {
+            let baseRes = analyzePatternCore(pureHistory, false);
+            let mechRes = analyzeBreakMechanism(pureHistory, false);
+
+            // 機制影響規則：反核心邏輯臨界值愈強 (antiValue 愈高)，正常核心邏輯結果信號愈弱
+            let adjustedConf = baseRes.confidence;
+            if (mechRes.antiValue >= 80) {
+                adjustedConf = Math.max(50, baseRes.confidence - 25);
+            } else if (mechRes.antiValue >= 60) {
+                adjustedConf = Math.max(50, baseRes.confidence - 15);
             }
-            return { name: '大路形態 (主路獨立訊號)', target: result.target, confidence: result.confidence, reason: result.reason, breakDesc: result.breakDesc };
+
+            return {
+                name: '大路形態 (核心 1)',
+                target: baseRes.target,
+                confidence: adjustedConf,
+                logicReason: baseRes.reason,
+                mechReason: `【反打臨界值: ${mechRes.antiValue}%】${mechRes.levelText} — ${mechRes.reason}`
+            };
         }
 
-        function analyzeDownThreeRoads(pureHistory, offset, roadName, skipBreak = false) {
+        // 下三路核心分析 (整合破路/反打機制)
+        function analyzeDownThreeRoadsWithMech(pureHistory, offset, roadName) {
             let colorSequence = getDownThreeRoadSequence(pureHistory, offset);
-            if (colorSequence.length === 0) return { name: roadName, target: 'NEUTRAL', confidence: 50, reason: '走勢轉向次數不足，尚未形成此路', breakDesc: '【常規方向】無破路觸發' };
-            
-            let patternAnalysis = analyzePatternFromSequence(colorSequence, 'RED_BLUE');
-            if (patternAnalysis.target === 'NEUTRAL') {
-                return { name: roadName, target: 'NEUTRAL', confidence: 50, reason: '路子顏色交替不規律，無明確趨勢', breakDesc: '【常規方向】無破路觸發' };
+            if (colorSequence.length === 0) {
+                return { name: roadName, target: 'NEUTRAL', confidence: 50, logicReason: '走勢轉向次數不足，尚未形成此路', mechReason: '【反打臨界值: 0%】<span class="mech-low">穩定</span> — 數據不足' };
             }
 
-            let targetColor = patternAnalysis.target;
-            let conf = patternAnalysis.confidence;
+            let baseRes = analyzePatternCore(colorSequence, true);
+            let mechRes = analyzeBreakMechanism(colorSequence, true);
+
+            if (baseRes.target === 'NEUTRAL') {
+                return { name: roadName, target: 'NEUTRAL', confidence: 50, logicReason: '路子顏色交替不規律，無明確趨勢', mechReason: `【反打臨界值: ${mechRes.antiValue}%】${mechRes.levelText} — ${mechRes.reason}` };
+            }
+
+            let targetColor = baseRes.target;
             let colorName = targetColor === 'RED' ? '紅' : '藍';
 
             let simB = pureHistory.concat(['B']);
@@ -549,20 +525,69 @@
                 ownTarget = 'P';
                 reasonStr = `指標指向【${colorName}】 ➔ 對位推算唯有【閒】滿足。`;
             } else {
-                return { name: roadName, target: 'NEUTRAL', confidence: 50, reason: `預測開【${colorName}】，但莊閒雙方試算結果對稱，失去方向性`, breakDesc: patternAnalysis.breakDesc };
+                return { name: roadName, target: 'NEUTRAL', confidence: 50, logicReason: `預測開【${colorName}】，但莊閒雙方試算結果對稱，失去方向性`, mechReason: `【反打臨界值: ${mechRes.antiValue}%】${mechRes.levelText} — ${mechRes.reason}` };
             }
 
-            if (skipBreak && conf >= 88) {
-                let lastItem = pureHistory[pureHistory.length - 1];
-                return { name: roadName, target: lastItem, confidence: 75, reason: `【臨界點緩衝保護】上局破路預測未成功，本局依循正常趨勢 1 局`, breakDesc: '【緩衝保護中】暫停破路反打' };
+            // 根據機制反打臨界值調節信號強弱
+            let adjustedConf = baseRes.confidence;
+            if (mechRes.antiValue >= 80) {
+                adjustedConf = Math.max(50, baseRes.confidence - 25);
+            } else if (mechRes.antiValue >= 60) {
+                adjustedConf = Math.max(50, baseRes.confidence - 15);
             }
 
-            let finalReason = patternAnalysis.reason + ' ➔ ' + reasonStr;
-            return { name: roadName, target: ownTarget, confidence: conf, reason: finalReason, breakDesc: patternAnalysis.breakDesc };
+            return {
+                name: roadName,
+                target: ownTarget,
+                confidence: adjustedConf,
+                logicReason: baseRes.reason + ' ➔ ' + reasonStr,
+                mechReason: `【反打臨界值: ${mechRes.antiValue}%】${mechRes.levelText} — ${mechRes.reason}`
+            };
+        }
+
+        function analyzePatternCore(sequence, isColor) {
+            let getItemName = (item) => item === 'RED' ? '紅點' : (item === 'BLUE' ? '藍點' : (item === 'B' ? '莊' : '閒'));
+            if (!sequence || sequence.length < 3) return { target: 'NEUTRAL', confidence: 50, reason: '數據不足' };
+
+            let matrix = buildRoadMatrix(sequence);
+            let numCols = matrix.length;
+            if (numCols === 0) return { target: 'NEUTRAL', confidence: 50, reason: '無有效數據' };
+
+            let colLens = matrix.map(col => col.length);
+            let curCol = matrix[numCols - 1];
+            let curLen = curCol.length;
+            let lastItem = sequence[sequence.length - 1];
+
+            let l1 = numCols >= 1 ? colLens[numCols - 1] : 0;
+            let l2 = numCols >= 2 ? colLens[numCols - 2] : 0;
+            let l3 = numCols >= 3 ? colLens[numCols - 3] : 0;
+
+            let target = lastItem;
+            let conf = 75;
+            let reason = `依循當前連開趨勢預測 ${getItemName(lastItem)}`;
+
+            if (curLen === 3) {
+                conf = 85;
+                reason = `【小龍形態】(連開 3 顆)，順打上一顆 ${getItemName(lastItem)}`;
+            } else if (curLen >= 4) {
+                conf = 90 + Math.min(curLen - 4, 5);
+                reason = `【大龍走勢】(連開 ${curLen} 顆)，順打上一顆 ${getItemName(lastItem)}`;
+            } else if (numCols >= 3 && l3 === 2 && l2 === 2 && l1 === 1) {
+                conf = 84;
+                reason = `【雙跳 2-2-1】格局，預測補齊 ${getItemName(lastItem)}`;
+            } else if (numCols >= 2 && l2 === 3 && l1 === 2) {
+                conf = 83;
+                reason = `【3-2】格局，順打上一顆 ${getItemName(lastItem)}`;
+            } else if (numCols >= 3 && l3 === 3 && l2 === 3 && l1 === 2) {
+                conf = 90;
+                reason = `【3-3-2】格局，順打上一顆 ${getItemName(lastItem)}`;
+            }
+
+            return { target, confidence: conf, reason };
         }
 
         // ==========================================
-        // 重構後的盤珠路九宮格核心邏輯
+        // 盤珠路九宮格核心邏輯 (維持不變)
         // ==========================================
         function analyzeNineGridBeadRoad(pureHistory) {
             let grid = [];
@@ -576,23 +601,21 @@
             }
 
             let numCols = grid.length;
-            if (numCols === 0) return { name: '盤珠路九宮格 (全局輔助)', target: 'NEUTRAL', confidence: 50, reason: '無有效數據', breakDesc: '【全局比例防禦】無數據' };
+            if (numCols === 0) return { name: '盤珠路九宮格 (核心 5)', target: 'NEUTRAL', confidence: 50, logicReason: '無有效數據', mechReason: '無' };
 
             let currentRowInCol = grid[numCols - 1] ? grid[numCols - 1].length - 1 : 0;
             let currentColumnIndex = numCols - 1;
 
-            // 規則：Row 1 & Row 2 不作分析進行觀望，起點由第 3 row、第 3 column 開始
             if (currentColumnIndex < 2 || currentRowInCol < 2) {
                 return { 
-                    name: '盤珠路九宮格 (全局輔助)', 
+                    name: '盤珠路九宮格 (核心 5)', 
                     target: 'NEUTRAL', 
                     confidence: 50, 
-                    reason: '目前處於 Row 1 或 Row 2 範圍（或欄位不足 3 欄），依照規則進行觀望',
-                    breakDesc: '【全局比例防禦】暫無觸發'
+                    logicReason: '目前處於 Row 1 或 Row 2 範圍（或欄位不足 3 欄），依照規則進行觀望',
+                    mechReason: '【九宮格狀態】等待進入 Row 3 以上'
                 };
             }
 
-            // 3x3 視窗範圍：結束於當前 column 與 row (即 A1-C3 到 A2-C4 類的滑動視窗)
             let startCol = currentColumnIndex - 2;
             let startRow = currentRowInCol - 2;
 
@@ -607,30 +630,27 @@
                 }
             }
 
-            // 必須有 8 顆或以上數據才成立
             if (cells.length < 8) {
                 return { 
-                    name: '盤珠路九宮格 (全局輔助)', 
+                    name: '盤珠路九宮格 (核心 5)', 
                     target: 'NEUTRAL', 
                     confidence: 50, 
-                    reason: `3x3 視窗內有效數據僅 ${cells.length} 顆，未達 8 顆門檻`,
-                    breakDesc: '【全局比例防禦】數據未達 8 顆'
+                    logicReason: `3x3 視窗內有效數據僅 ${cells.length} 顆，未達 8 顆門檻`,
+                    mechReason: '【九宮格狀態】數據未達 8 顆'
                 };
             }
 
-            // 計算莊閒比例（和局計算在內，但只提取莊閒數量）
             let countB = cells.filter(x => x === 'B').length;
             let countP = cells.filter(x => x === 'P').length;
             let diffBP = Math.abs(countB - countP);
 
-            // 莊閒比例差距超過 2 顆才成為「比例」
             if (diffBP <= 2) {
                 return { 
-                    name: '盤珠路九宮格 (全局輔助)', 
+                    name: '盤珠路九宮格 (核心 5)', 
                     target: 'NEUTRAL', 
                     confidence: 50, 
-                    reason: `3x3 視窗內莊閒差距 ${diffBP} 顆 (莊:${countB}, 閒:${countP})，未超過 2 顆，無明確比例`,
-                    breakDesc: '【全局比例防禦】差距未超過 2 顆'
+                    logicReason: `3x3 視窗內莊閒差距 ${diffBP} 顆 (莊:${countB}, 閒:${countP})，未超過 2 顆`,
+                    mechReason: '【九宮格狀態】比例差距未超過 2 顆'
                 };
             }
 
@@ -638,81 +658,52 @@
             let minority = countB > countP ? 'P' : 'B';
             let ratioStr = `${countB}莊:${countP}閒`;
 
-            // 全局已開出莊閒比例差距
             let globalB = pureHistory.filter(x => x === 'B').length;
             let globalP = pureHistory.filter(x => x === 'P').length;
             let globalDiff = Math.abs(globalB - globalP);
 
             let target = 'NEUTRAL';
             let reasonStr = "";
-            let breakDesc = '【全局比例順打】';
 
-            // 全局莊閒差距在正負 2 局內 (globalDiff <= 2) -> 推薦較少方
-            // 全局莊閒差距超過正負 2 局 (globalDiff > 2) -> 推薦較多方
             if (globalDiff <= 2) {
                 target = minority;
-                reasonStr = `3x3 視窗出現明確比例 (${ratioStr})。全局莊閒差 (${globalDiff}) 在正負 2 局內，推薦較少方【${minority === 'B' ? '莊' : '閒'}】`;
-                breakDesc = '【全局比例順打】差距在 ±2 內，推薦較少方';
+                reasonStr = `3x3 視窗出現比例 (${ratioStr})。全局莊閒差 (${globalDiff}) 在正負 2 局內，推薦較少方【${minority === 'B' ? '莊' : '閒'}】`;
             } else {
                 target = majority;
-                reasonStr = `3x3 視窗出現明確比例 (${ratioStr})。全局莊閒差 (${globalDiff}) 超過正負 2 局，推薦較多方【${majority === 'B' ? '莊' : '閒'}】`;
-                breakDesc = '【全局比例順打】差距超過 ±2，推薦較多方';
+                reasonStr = `3x3 視窗出現比例 (${ratioStr})。全局莊閒差 (${globalDiff}) 超過正負 2 局，推薦較多方【${majority === 'B' ? '莊' : '閒'}】`;
             }
 
-            // Row 6 如出現比例，則按照分析結果進行反打操作 (currentRowInCol === 5 即為 Row 6)
             if (currentRowInCol === 5 && target !== 'NEUTRAL') {
                 target = target === 'B' ? 'P' : 'B';
                 reasonStr += ` ➔ 觸及盤珠路第 6 Row，執行【極限反打】修正為【${target === 'B' ? '莊' : '閒'}】！`;
-                breakDesc = '【臨界點極限反打】Row 6 強制反打';
             }
 
             let conf = 88;
             return { 
-                name: '盤珠路九宮格 (全局輔助)', 
+                name: '盤珠路九宮格 (核心 5)', 
                 target: target, 
                 confidence: conf, 
-                reason: getStrengthTag(conf) + reasonStr, 
-                breakDesc: breakDesc 
+                logicReason: getStrengthTag(conf) + reasonStr, 
+                mechReason: '【九宮格狀態】比例核心運作正常' 
             };
         }
 
-        function checkPreviousBreakFailure(pureHistory, coreIndex) {
-            if (pureHistory.length < 11) return false;
-            let pastHistory = pureHistory.slice(0, -1);
-            let actualNext = pureHistory[pureHistory.length - 1];
-            let pastCores = getCoresAnalysisInternal(pastHistory, true);
-            let pastRes = pastCores[coreIndex];
-            if (pastRes && pastRes.confidence >= 88 && pastRes.target !== 'NEUTRAL' && pastRes.target !== actualNext) {
-                return true; 
-            }
-            return false;
-        }
-
-        function getCoresAnalysisInternal(pureHistory, isInternal = false) {
+        function getCoresAnalysis(pureHistory) {
             if (pureHistory.length < 10) {
                 let reasonStr = `有效牌局未達 10 局門檻 (當前 ${pureHistory.length}/10)，保持觀望`;
                 return Array(5).fill(null).map((_, idx) => ({
-                    name: ['大路形態 (主路獨立訊號)', '下三路 (大眼仔獨立訊號)', '下三路 (小路獨立訊號)', '下三路 (曱甴路獨立訊號)', '盤珠路九宮格 (全局輔助)'][idx],
-                    target: 'NEUTRAL', confidence: 50, reason: reasonStr, breakDesc: '數據未達 10 局門檻'
+                    name: ['大路形態 (核心 1)', '下三路 (大眼仔 核心 2)', '下三路 (小路 核心 3)', '下三路 (曱甴路 核心 4)', '盤珠路九宮格 (核心 5)'][idx],
+                    target: 'NEUTRAL', confidence: 50, logicReason: reasonStr, mechReason: '等待數據解鎖'
                 }));
             }
 
-            let skip0 = !isInternal && checkPreviousBreakFailure(pureHistory, 0);
-            let skip1 = !isInternal && checkPreviousBreakFailure(pureHistory, 1);
-            let skip2 = !isInternal && checkPreviousBreakFailure(pureHistory, 2);
-            let skip3 = !isInternal && checkPreviousBreakFailure(pureHistory, 3);
-
-            let bigRoadRes = analyzeBigRoadPatterns(pureHistory, skip0);
-            let res1 = analyzeDownThreeRoads(pureHistory, 1, '下三路 (大眼仔獨立訊號)', skip1);
-            let res2 = analyzeDownThreeRoads(pureHistory, 2, '下三路 (小路獨立訊號)', skip2);
-            let res3 = analyzeDownThreeRoads(pureHistory, 3, '下三路 (曱甴路獨立訊號)', skip3);
+            let bigRoadRes = analyzeBigRoadPatterns(pureHistory);
+            let res1 = analyzeDownThreeRoadsWithMech(pureHistory, 1, '下三路 (大眼仔 核心 2)');
+            let res2 = analyzeDownThreeRoadsWithMech(pureHistory, 2, '下三路 (小路 核心 3)');
+            let res3 = analyzeDownThreeRoadsWithMech(pureHistory, 3, '下三路 (曱甴路 核心 4)');
             let res4 = analyzeNineGridBeadRoad(pureHistory);
 
             return [bigRoadRes, res1, res2, res3, res4];
-        }
-
-        function getCoresAnalysis(pureHistory) {
-            return getCoresAnalysisInternal(pureHistory, false);
         }
 
         function getFinalPrediction(pureHistory) {
@@ -885,8 +876,6 @@
                     let targetText = res.target === 'B' ? '莊 (B)' : (res.target === 'P' ? '閒 (P)' : '觀望');
                     let tagClass = res.target === 'B' ? 'tag-B' : (res.target === 'P' ? 'tag-P' : 'tag-N');
                     let confHtml = `<span class="card-conf">可信度 ${res.confidence}%</span>`;
-                    let breakTagClass = res.breakDesc.includes('臨界點') || res.breakDesc.includes('破路信號') ? "card-break-tag active" : "card-break-tag";
-                    let breakTagHtml = res.breakDesc ? `<div class="${breakTagClass}">${res.breakDesc}</div>` : "";
 
                     let card = document.createElement("div");
                     card.className = "analysis-card";
@@ -899,8 +888,14 @@
                                 <span class="card-target ${tagClass}">${targetText}</span>
                             </div>
                         </div>
-                        ${breakTagHtml}
-                        <div class="card-reason">${res.reason}</div>
+                        <div class="section-box">
+                            <div class="section-title">📊 邏輯分析</div>
+                            <div class="section-content">${res.logicReason}</div>
+                        </div>
+                        <div class="section-box">
+                            <div class="section-title">⚙️ 破路/反打機制</div>
+                            <div class="section-content">${res.mechReason}</div>
+                        </div>
                     `;
                     gridContainer.appendChild(card);
                 });
@@ -933,9 +928,6 @@
                     tagClass = "tag-N";
                 }
 
-                let breakTagClass = res.breakDesc.includes('臨界點') || res.breakDesc.includes('破路信號') ? "card-break-tag active" : "card-break-tag";
-                let breakTagHtml = res.breakDesc ? `<div class="${breakTagClass}">${res.breakDesc}</div>` : "";
-
                 let card = document.createElement("div");
                 card.className = "analysis-card";
                 card.innerHTML = `
@@ -947,8 +939,14 @@
                             <span class="card-target ${tagClass}">${targetText}</span>
                         </div>
                     </div>
-                    ${breakTagHtml}
-                    <div class="card-reason">${res.reason}</div>
+                    <div class="section-box">
+                        <div class="section-title">📊 邏輯分析</div>
+                        <div class="section-content">${res.logicReason}</div>
+                    </div>
+                    <div class="section-box">
+                        <div class="section-title">⚙️ 破路/反打機制</div>
+                        <div class="section-content">${res.mechReason}</div>
+                    </div>
                 `;
                 gridContainer.appendChild(card);
             });
