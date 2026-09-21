@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>百家樂多維單分析與旗艦預測系統 (線上直播面板旗艦版)</title>
+    <title>百家樂多維單分析與旗艦預測系統 (孫子兵法旗艦版)</title>
     <style>
         :root {
             --bg-color: #0b0f19;
@@ -14,6 +14,7 @@
             --player-color: #2563eb;
             --tie-color: #16a34a;
             --border-color: #1e293b;
+            --accent-color: #8b5cf6;
         }
         * {
             box-sizing: border-box;
@@ -76,14 +77,15 @@
             padding: 20px 0;
         }
         .prediction-signal {
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             font-weight: bold;
             margin: 10px 0;
             letter-spacing: 2px;
         }
         .prediction-reason {
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             color: var(--text-muted);
+            line-height: 1.4;
         }
         /* 控制按鈕樣式 */
         .controls {
@@ -149,14 +151,14 @@
     <div class="container">
         <header>
             <h1>百家樂多維單分析與旗艦預測系統</h1>
-            <p>線上直播面板旗艦版 - 嚴格多維共振與無邏輯觀望核心</p>
+            <p>孫子兵法旗艦版 - 3x3 矩陣共振與反打核心系統</p>
         </header>
 
         <div class="dashboard">
             <!-- 左側操作與預測區 -->
             <div style="display: flex; flex-direction: column; gap: 20px;">
                 <div class="card">
-                    <h2>即時預測訊號</h2>
+                    <h2>孫子兵法即時預測訊號</h2>
                     <div class="prediction-box">
                         <div class="prediction-signal" id="prediction-signal">觀望</div>
                         <div class="prediction-reason" id="prediction-reason">局數不足，暫無邏輯</div>
@@ -187,6 +189,11 @@
                 <h2>多維路單與狀態檢視</h2>
                 
                 <div class="road-container">
+                    <div class="road-title" style="color: var(--accent-color); font-weight: bold;">【孫子兵法核心分析】(3x3 矩陣動態狀態)</div>
+                    <div id="sun-tzu-view" style="font-size: 0.9rem; color: var(--text-muted); padding: 5px 0;">等待數據輸入...</div>
+                </div>
+
+                <div class="road-container">
                     <div class="road-title">大路結構摘要</div>
                     <div id="big-road-view" style="font-size: 0.9rem; color: var(--text-muted); padding: 5px 0;">等待數據輸入...</div>
                 </div>
@@ -200,22 +207,31 @@
     </div>
 
     <script>
-        // 紀錄歷史局勢數據 ('B', 'P', 'T')
-        let gameHistory = [];
+        // 紀錄歷史局勢數據 ('B', 'P', 'T') - 支援 localStorage 持久化
+        let gameHistory = JSON.parse(localStorage.getItem('baccarat_sun_tzu_history')) || [];
+
+        function saveHistory() {
+            localStorage.setItem('baccarat_sun_tzu_history', JSON.stringify(gameHistory));
+        }
 
         function addResult(result) {
             gameHistory.push(result);
+            saveHistory();
             updateDisplay();
         }
 
         function undoResult() {
-            gameHistory.pop();
-            updateDisplay();
+            if (gameHistory.length > 0) {
+                gameHistory.pop();
+                saveHistory();
+                updateDisplay();
+            }
         }
 
         function resetGame() {
             if (confirm("確定要重置所有紀錄嗎？")) {
                 gameHistory = [];
+                localStorage.removeItem('baccarat_sun_tzu_history');
                 updateDisplay();
             }
         }
@@ -260,7 +276,6 @@
             return hasPattern; 
         }
 
-        // 檢查特定規律是否存在
         function checkRoadPattern(bigRoad, offset) {
             let colCount = bigRoad.length;
             if (colCount <= offset) return null;
@@ -277,50 +292,132 @@
             return null; 
         }
 
-        // 主預測函數：多維分析與觀望機制
-        function calculatePrediction() {
-            if (gameHistory.length < 6) {
-                return { signal: "觀望", reason: "局數不足，暫無邏輯" };
+        // 新增核心邏輯：孫子兵法 (盤珠路 3x3 矩陣框選分析)
+        function calculateSunTzuPrediction(history) {
+            // 起始要求：至少 14 局已開數據 (第 15 局為 Row 3, Col 3 預測起點)
+            if (history.length < 14) {
+                return { signal: "觀望", reason: "局數不足 14 局 (需由第 3 行第 3 列起點開始)" };
             }
 
-            const bigRoad = parseBigRoad(gameHistory);
-            
-            const bigEyeBoy = analyzeLowerRoad(bigRoad, 1); // 大眼仔路
-            const smallRoad = analyzeLowerRoad(bigRoad, 2); // 小路
-            const cockroachRoad = analyzeLowerRoad(bigRoad, 3); // 曱甴路
+            // 計算下一個預測點在盤珠路中的位置 (1-indexed)
+            const targetCol = Math.floor(history.length / 6) + 1;
+            const targetRow = (history.length % 6) + 1;
 
-            let signals = [];
-            if (bigEyeBoy) signals.push(bigEyeBoy);
-            if (smallRoad) signals.push(smallRoad);
-            if (cockroachRoad) signals.push(cockroachRoad);
-
-            // 核心修正：刪除連續趨勢判定，無邏輯則觀望
-            if (signals.length === 0) {
-                return { signal: "觀望", reason: "未出現明確路單邏輯" };
+            // Row 1 與 Row 2 不作分析進行觀望，最高分析到 Row 6
+            if (targetRow < 3 || targetRow > 6 || targetCol < 3) {
+                return { signal: "觀望", reason: `目前在第 ${targetCol} 行第 ${targetRow} 行，未達 Row 3-6 分析區間` };
             }
 
-            let firstSignal = signals[0];
-            let isConsensus = signals.every(s => s === firstSignal);
+            // 建立盤珠路 6 行網格數據結構
+            let cols = [];
+            let currentCol = [];
+            history.forEach(res => {
+                currentCol.push(res);
+                if (currentCol.length === 6) {
+                    cols.push(currentCol);
+                    currentCol = [];
+                }
+            });
+            if (currentCol.length > 0) cols.push(currentCol);
 
-            if (isConsensus && signals.length >= 2) {
-                return { 
-                    signal: firstSignal === 'B' ? "莊 (Banker)" : "閒 (Player)", 
-                    reason: "多維下三路邏輯共振" 
-                };
+            function getBead(r, c) {
+                let colIdx = c - 1;
+                let rowIdx = r - 1;
+                if (cols[colIdx] && cols[colIdx][rowIdx]) {
+                    return cols[colIdx][rowIdx];
+                }
+                return null;
             }
 
-            return { signal: "觀望", reason: "多維邏輯分歧，暫不進場" };
+            // 3x3 矩陣範圍 (以 targetRow, targetCol 為右下角)
+            let startRow = targetRow - 2;
+            let endRow = targetRow;
+            let startCol = targetCol - 2;
+            let endCol = targetCol;
+
+            let countB = 0;
+            let countP = 0;
+            let filledCount = 0;
+
+            for (let c = startCol; c <= endCol; c++) {
+                for (let r = startRow; r <= endRow; r++) {
+                    // 略過目標預測格本身
+                    if (r === targetRow && c === targetCol) continue;
+                    
+                    let val = getBead(r, c);
+                    if (val === 'B') {
+                        countB++;
+                        filledCount++;
+                    } else if (val === 'P') {
+                        countP++;
+                        filledCount++;
+                    } else if (val === 'T') {
+                        filledCount++; // 和局計入 8 格內，但不計入莊閒比
+                    }
+                }
+            }
+
+            if (filledCount < 8) {
+                return { signal: "觀望", reason: "3x3 矩陣內數據未滿 8 顆" };
+            }
+
+            let diff = Math.abs(countB - countP);
+            // 9格內 8 顆莊閒比例差距超過 2 顆才成為比例
+            if (diff <= 2) {
+                return { signal: "觀望", reason: `3x3 矩陣莊閒差距 ${diff} 局 (未超過 2 局)` };
+            }
+
+            // 判定 3x3 比例較多與較少
+            let dominant = countB > countP ? 'B' : 'P';
+            let minority = countB > countP ? 'P' : 'B';
+
+            // 全局莊閒統計
+            let globalB = history.filter(x => x === 'B').length;
+            let globalP = history.filter(x => x === 'P').length;
+            let globalDiff = Math.abs(globalB - globalP);
+
+            let baseRecommendation = '';
+            let strategyDesc = '';
+
+            // 全局已開出莊閒比例差距較少 (正負 2 局內) -> 推薦「比例」較少
+            if (globalDiff <= 2) {
+                baseRecommendation = minority;
+                strategyDesc = `全局差距 ${globalDiff} 局 (<=2)，取較少者`;
+            } else {
+                // 全局已開出莊閒比例差距較多 (超過正負 2 局) -> 推薦「比例」較多
+                baseRecommendation = dominant;
+                strategyDesc = `全局差距 ${globalDiff} 局 (>2)，取較多者`;
+            }
+
+            let finalSignal = baseRecommendation;
+            let rowNote = '';
+
+            // Row 6 如出現比例，則進行反打操作
+            if (targetRow === 6) {
+                finalSignal = baseRecommendation === 'B' ? 'P' : 'B';
+                rowNote = ' [Row 6 反打操作]';
+            }
+
+            let signalText = finalSignal === 'B' ? '莊 (Banker)' : '閒 (Player)';
+            let reasonText = `孫子兵法 (Row ${targetRow}, Col ${targetCol}): 3x3(莊${countB}:閒${countP}), ${strategyDesc}${rowNote}`;
+
+            return {
+                signal: signalText,
+                reason: reasonText,
+                details: { targetRow, targetCol, countB, countP, globalDiff, rowNote }
+            };
         }
 
         // 更新介面顯示
         function updateDisplay() {
-            const prediction = calculatePrediction();
+            const prediction = calculateSunTzuPrediction(gameHistory);
             
             const signalElement = document.getElementById("prediction-signal");
             const reasonElement = document.getElementById("prediction-reason");
             const historyText = document.getElementById("history-list-text");
             const bigRoadView = document.getElementById("big-road-view");
             const lowerRoadView = document.getElementById("lower-road-view");
+            const sunTzuView = document.getElementById("sun-tzu-view");
             
             if (signalElement) {
                 signalElement.innerText = prediction.signal;
@@ -339,11 +436,22 @@
                 historyText.innerText = gameHistory.length > 0 ? gameHistory.join(' - ') : "尚無紀錄";
             }
 
+            // 孫子兵法狀態檢視
+            if (sunTzuView) {
+                if (prediction.details) {
+                    sunTzuView.innerText = `目前位置: Row ${prediction.details.targetRow}, Col ${prediction.details.targetCol} | 3x3莊閒分佈: 莊(${prediction.details.countB}) 閒(${prediction.details.countP}) | 全局差: ${prediction.details.globalDiff}${prediction.details.rowNote}`;
+                } else {
+                    sunTzuView.innerText = prediction.reason;
+                }
+            }
+
+            // 大路檢視
             const bigRoad = parseBigRoad(gameHistory);
             if (bigRoadView) {
                 bigRoadView.innerText = bigRoad.length > 0 ? JSON.stringify(bigRoad) : "等待數據輸入...";
             }
 
+            // 下三路檢視
             if (lowerRoadView) {
                 const eb = analyzeLowerRoad(bigRoad, 1);
                 const sm = analyzeLowerRoad(bigRoad, 2);
