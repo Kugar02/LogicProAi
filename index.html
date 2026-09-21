@@ -228,7 +228,7 @@
 
     <header>
         <h1>百家樂多維路單分析與旗艦預測系統</h1>
-        <p>線上直播主面板風格 • 獨立 4 核心反打機制與 6 大邏輯重構版</p>
+        <p>線上直播主面板風格 • 獨立 4 核心反打機制與 6 大邏輯重構版（含孫子兵法）</p>
     </header>
 
     <div class="panel-container">
@@ -453,7 +453,6 @@
             let lastItem = sequence[sequence.length - 1];
             let antiTarget = lastItem === 'B' ? 'P' : (lastItem === 'RED' ? 'BLUE' : (lastItem === 'P' ? 'B' : 'RED'));
 
-            // 計算連續單跳次數
             let singleCount = 0;
             for (let i = numCols - 1; i >= 0; i--) {
                 if (colLens[i] === 1) singleCount++;
@@ -490,7 +489,7 @@
         }
 
         // ==========================================
-        // 核心分析邏輯 1 到 6 (重新設定)
+        // 核心分析邏輯 1 到 6
         // ==========================================
         function analyzePatternCore(sequence, isColor) {
             let getItemName = (item) => item === 'RED' ? '紅點' : (item === 'BLUE' ? '藍點' : (item === 'B' ? '莊' : '閒'));
@@ -513,19 +512,16 @@
             let conf = 75;
             let reason = `依循當前趨勢預測 ${getItemName(lastItem)}`;
 
-            // 邏輯1：雙跳判斷 2-2-1 補齊成 2-2-2
             if (numCols >= 3 && l3 === 2 && l2 === 2 && l1 === 1) {
                 target = lastItem;
                 conf = 85;
                 reason = `【邏輯1：雙跳 2-2-1】預測補齊成 2-2-2，順打 ${getItemName(lastItem)}`;
             }
-            // 邏輯2：1-2-1 / 2-1-2 反打上一顆成為 1-2-1-1 / 2-1-2-1
             else if ((numCols >= 3 && l3 === 1 && l2 === 2 && l1 === 1) || (numCols >= 3 && l3 === 2 && l2 === 1 && l1 === 2)) {
                 target = oppositeItem;
                 conf = 86;
                 reason = `【邏輯2：1-2-1/2-1-2 形態】觸發反打，預測開出 ${getItemName(oppositeItem)}`;
             }
-            // 邏輯3：小龍判斷 3 顆，大龍判斷 6 顆
             else if (curLen === 3) {
                 target = lastItem;
                 conf = 85;
@@ -536,19 +532,16 @@
                 conf = 92;
                 reason = `【邏輯3：大龍走勢】(連開 6 顆)，順打 ${getItemName(lastItem)}`;
             }
-            // 邏輯4：單跳判斷 1-1-1 反打成為 1-1-1-1
             else if (numCols >= 3 && l3 === 1 && l2 === 1 && l1 === 1) {
                 target = oppositeItem;
                 conf = 88;
                 reason = `【邏輯4：單跳 1-1-1】連續單跳過多，觸發反打預測 ${getItemName(oppositeItem)}`;
             }
-            // 邏輯5：如出現 3-2 判斷補齊 3-3
             else if (numCols >= 2 && l2 === 3 && l1 === 2) {
                 target = lastItem;
                 conf = 84;
                 reason = `【邏輯5：3-2 形態】預測補齊成 3-3，順打 ${getItemName(lastItem)}`;
             }
-            // 邏輯6：如出現 3-3-2 判斷補齊 3-3-3
             else if (numCols >= 3 && l3 === 3 && l2 === 3 && l1 === 2) {
                 target = lastItem;
                 conf = 90;
@@ -558,7 +551,7 @@
             return { target, confidence: conf, reason };
         }
 
-        // 大路形態分析 (整合破路機制 >80% 強制覆蓋)
+        // 大路形態分析
         function analyzeBigRoadPatterns(pureHistory) {
             let baseRes = analyzePatternCore(pureHistory, false);
             let mechRes = analyzeBreakMechanism(pureHistory, false);
@@ -567,7 +560,6 @@
             let finalConf = baseRes.confidence;
             let logicReason = baseRes.reason;
 
-            // 規則：如機制高於80% 該核心最終結果則按照機制結果作為最終判定預測
             if (mechRes.antiValue >= 80 && mechRes.antiTarget) {
                 finalTarget = mechRes.antiTarget;
                 finalConf = 92;
@@ -583,7 +575,7 @@
             };
         }
 
-        // 下三路核心分析 (整合破路機制 >80% 強制覆蓋)
+        // 下三路核心分析
         function analyzeDownThreeRoadsWithMech(pureHistory, offset, roadName) {
             let colorSequence = getDownThreeRoadSequence(pureHistory, offset);
             if (colorSequence.length === 0) {
@@ -622,7 +614,6 @@
             let finalConf = baseRes.confidence;
             let finalLogicReason = baseRes.reason + ' ➔ ' + reasonStr;
 
-            // 機制大於 80% 強制覆蓋
             if (mechRes.antiValue >= 80 && mechRes.antiTarget) {
                 let mechTargetChar = (mechRes.antiTarget === 'RED') ? 'B' : 'P';
                 finalTarget = mechTargetChar;
@@ -640,9 +631,9 @@
         }
 
         // ==========================================
-        // 盤珠路九宮格核心邏輯 (核心 5)
+        // 孫子兵法核心邏輯 (核心 5 新增)
         // ==========================================
-        function analyzeNineGridBeadRoad(pureHistory) {
+        function analyzeSunTzuBeadRoad(pureHistory) {
             let grid = [];
             let currentCol = [];
             for (let i = 0; i < pureHistory.length; i++) {
@@ -654,22 +645,24 @@
             }
 
             let numCols = grid.length;
-            if (numCols === 0) return { name: '盤珠路九宮格 (核心 5)', target: 'NEUTRAL', confidence: 50, logicReason: '無有效數據', mechReason: '無' };
+            if (numCols === 0) return { name: '孫子兵法 (核心 5)', target: 'NEUTRAL', confidence: 50, logicReason: '無有效數據', mechReason: '無' };
 
-            let currentRowInCol = grid[numCols - 1] ? grid[numCols - 1].length - 1 : 0;
-            let currentColumnIndex = numCols - 1;
+            let currentColIndex = numCols - 1;
+            let currentRowInCol = grid[currentColIndex] ? grid[currentColIndex].length : 0;
 
-            if (currentColumnIndex < 2 || currentRowInCol < 2) {
-                return { 
-                    name: '盤珠路九宮格 (核心 5)', 
-                    target: 'NEUTRAL', 
-                    confidence: 50, 
-                    logicReason: '目前處於 Row 1 或 Row 2 範圍（或欄位不足 3 欄），觀望中',
-                    mechReason: '【九宮格狀態】等待進入 Row 3 以上'
+            // 限制：需至少 3 欄，且行數在 Row 4 至 Row 6 之間 (0-indexed 3至5)
+            // Row 1 & Row 2 不作分析 (index 0, 1)
+            if (currentColIndex < 2 || currentRowInCol < 2 || currentRowInCol > 5) {
+                return {
+                    name: '孫子兵法 (核心 5)',
+                    target: 'NEUTRAL',
+                    confidence: 50,
+                    logicReason: '目前行數位於 Row 1 或 Row 2 範圍（或未滿3欄），暫時觀望中',
+                    mechReason: '【孫子兵法狀態】等待進入 Row 4 到 Row 6 範圍'
                 };
             }
 
-            let startCol = currentColumnIndex - 2;
+            let startCol = currentColIndex - 2;
             let startRow = currentRowInCol - 2;
 
             let cells = [];
@@ -683,13 +676,14 @@
                 }
             }
 
+            // 9格內只要8顆都有數據邏輯才成立
             if (cells.length < 8) {
-                return { 
-                    name: '盤珠路九宮格 (核心 5)', 
-                    target: 'NEUTRAL', 
-                    confidence: 50, 
+                return {
+                    name: '孫子兵法 (核心 5)',
+                    target: 'NEUTRAL',
+                    confidence: 50,
                     logicReason: `3x3 視窗內有效數據僅 ${cells.length} 顆，未達 8 顆門檻`,
-                    mechReason: '【九宮格狀態】數據未達 8 顆'
+                    mechReason: '【孫子兵法狀態】數據未達 8 顆'
                 };
             }
 
@@ -697,13 +691,14 @@
             let countP = cells.filter(x => x === 'P').length;
             let diffBP = Math.abs(countB - countP);
 
+            // 莊閒比例差距超過 2 顆才成為「比例」
             if (diffBP <= 2) {
-                return { 
-                    name: '盤珠路九宮格 (核心 5)', 
-                    target: 'NEUTRAL', 
-                    confidence: 50, 
-                    logicReason: `3x3 視窗內莊閒差距 ${diffBP} 顆 (莊:${countB}, 閒:${countP})，未超過 2 顆`,
-                    mechReason: '【九宮格狀態】比例差距未超過 2 顆'
+                return {
+                    name: '孫子兵法 (核心 5)',
+                    target: 'NEUTRAL',
+                    confidence: 50,
+                    logicReason: `3x3 視窗內莊閒差距 ${diffBP} 顆 (莊:${countB}, 閒:${countP})，差距未超過 2 顆`,
+                    mechReason: '【孫子兵法狀態】未形成顯著比例差距'
                 };
             }
 
@@ -720,24 +715,25 @@
 
             if (globalDiff <= 2) {
                 target = minority;
-                reasonStr = `3x3 視窗出現比例 (${ratioStr})。全局莊閒差 (${globalDiff}) 在正負 2 局內，推薦較少方【${minority === 'B' ? '莊' : '閒'}】`;
+                reasonStr = `3x3 視窗形成比例 (${ratioStr})。全局莊閒差 (${globalDiff}) 在正負 2 局內，推薦較少方【${minority === 'B' ? '莊' : '閒'}】`;
             } else {
                 target = majority;
-                reasonStr = `3x3 視窗出現比例 (${ratioStr})。全局莊閒差 (${globalDiff}) 超過正負 2 局，推薦較多方【${majority === 'B' ? '莊' : '閒'}】`;
+                reasonStr = `3x3 視窗形成比例 (${ratioStr})。全局莊閒差 (${globalDiff}) 超過正負 2 局，推薦較多方【${majority === 'B' ? '莊' : '閒'}】`;
             }
 
-            if (currentRowInCol === 5 && target !== 'NEUTRAL') {
+            let isRow6 = (currentRowInCol === 5);
+            if (isRow6 && target !== 'NEUTRAL') {
                 target = target === 'B' ? 'P' : 'B';
-                reasonStr += ` ➔ 觸及盤珠路第 6 Row，執行【極限反打】修正為【${target === 'B' ? '莊' : '閒'}】！`;
+                reasonStr += ` ➔ 觸及盤珠路第 6 Row，執行【反打操作】反轉為【${target === 'B' ? '莊' : '閒'}】！`;
             }
 
-            let conf = 88;
-            return { 
-                name: '盤珠路九宮格 (核心 5)', 
-                target: target, 
-                confidence: conf, 
-                logicReason: getStrengthTag(conf) + reasonStr, 
-                mechReason: '【九宮格狀態】比例核心運作正常' 
+            let conf = 89;
+            return {
+                name: '孫子兵法 (核心 5)',
+                target: target,
+                confidence: conf,
+                logicReason: getStrengthTag(conf) + reasonStr,
+                mechReason: isRow6 ? '【孫子兵法機制】第 6 Row 觸發反打操作' : '【孫子兵法機制】正常比例推薦'
             };
         }
 
@@ -745,7 +741,7 @@
             if (pureHistory.length < 10) {
                 let reasonStr = `有效牌局未達 10 局門檻 (當前 ${pureHistory.length}/10)，保持觀望`;
                 return Array(5).fill(null).map((_, idx) => ({
-                    name: ['大路形態 (核心 1)', '下三路 (大眼仔 核心 2)', '下三路 (小路 核心 3)', '下三路 (曱甴路 核心 4)', '盤珠路九宮格 (核心 5)'][idx],
+                    name: ['大路形態 (核心 1)', '下三路 (大眼仔 核心 2)', '下三路 (小路 核心 3)', '下三路 (曱甴路 核心 4)', '孫子兵法 (核心 5)'][idx],
                     target: 'NEUTRAL', confidence: 50, logicReason: reasonStr, mechReason: '等待數據解鎖'
                 }));
             }
@@ -754,7 +750,7 @@
             let res1 = analyzeDownThreeRoadsWithMech(pureHistory, 1, '下三路 (大眼仔 核心 2)');
             let res2 = analyzeDownThreeRoadsWithMech(pureHistory, 2, '下三路 (小路 核心 3)');
             let res3 = analyzeDownThreeRoadsWithMech(pureHistory, 3, '下三路 (曱甴路 核心 4)');
-            let res4 = analyzeNineGridBeadRoad(pureHistory);
+            let res4 = analyzeSunTzuBeadRoad(pureHistory);
 
             return [bigRoadRes, res1, res2, res3, res4];
         }
