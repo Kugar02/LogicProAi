@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; frame-ancestors 'none';">
-    <title>百家樂多維路單分析與旗艦預測系統 (終極神級精算版)</title>
+    <title>百家樂多維路單分析與旗艦預測系統 (大龍反打與和局重構版)</title>
     <style>
         :root {
             --bg-color: #0b0f19; --card-bg: #151c2f; --text-color: #f1f5f9; --text-muted: #94a3b8;
@@ -119,7 +119,7 @@
 
 <header>
     <h1>百家樂多維路單分析與旗艦預測系統</h1>
-    <p>終極神級精算版 • 4大優化機制: 動態權重 / 嚴格空倉 / 破路自否決 / 和局絕對否決</p>
+    <p aria-live="polite">終極神級精算版 • 大龍極限反打 / 破路自否決 / 全新和局變盤預測</p>
 </header>
 
 <div class="panel-container">
@@ -187,9 +187,9 @@
     <div class="direct-input-container">
         <span class="direct-title">點擊下方按鈕直接記錄當局開牌結果 (單靴上限 100 局)</span>
         <div class="btn-input-group">
-            <button class="btn-record btn-player" onclick="recordResult('P')">閒 (P)</button>
-            <button class="btn-record btn-tie" onclick="recordResult('T')">和 (T)</button>
-            <button class="btn-record btn-banker" onclick="recordResult('B')">莊 (B)</button>
+            <button class="btn-record btn-player" onclick="recordResult('P')" aria-label="記錄閒家">閒 (P)</button>
+            <button class="btn-record btn-tie" onclick="recordResult('T')" aria-label="記錄和局">和 (T)</button>
+            <button class="btn-record btn-banker" onclick="recordResult('B')" aria-label="記錄莊家">莊 (B)</button>
         </div>
     </div>
     <div class="btn-group">
@@ -197,13 +197,13 @@
         <button class="btn btn-clear-stage" onclick="clearRecords()">重置全盤牌局</button>
     </div>
     <div class="batch-input-group">
-        <input type="text" id="batchInput" placeholder="批量賽果（例：B,P,B,T）" onkeypress="handleKeyPress(event)">
+        <input type="text" id="batchInput" placeholder="批量賽果（例：B,P,B,T）支援 Enter 快捷鍵" onkeypress="handleKeyPress(event)" aria-label="批量輸入賽果">
         <button class="btn btn-utility" onclick="loadBatchInput()">載入</button>
     </div>
 </div>
 
 <div class="dashboard">
-    <div class="final-card">
+    <div class="final-card" aria-live="assertive">
         <div id="resonanceBadge" class="resonance-badge">🔥 三路共振啟動</div>
         <div class="final-title">最終預測建議 (神級動態引擎)</div>
         <div id="finalTarget" class="final-target target-N">觀望 (累積數據中)</div>
@@ -296,7 +296,6 @@
         return seq;
     }
 
-    // 優化 1 & 2：全域震盪指數評估
     function evaluateVolatility(pureHistory) {
         if (pureHistory.length < 10) return { chops: 0, isChoppy: false };
         let recent15 = pureHistory.slice(-15);
@@ -304,25 +303,24 @@
         for (let i = 1; i < recent15.length; i++) {
             if (recent15[i] !== recent15[i-1]) directionChanges++;
         }
-        // 如果 15 局內換向率超過 60% (約 9 次換向)，判定為絞殺盤
-        return { 
-            chops: directionChanges, 
-            isChoppy: (directionChanges / (recent15.length - 1)) >= 0.6 
-        };
+        return { chops: directionChanges, isChoppy: (directionChanges / (recent15.length - 1)) >= 0.6 };
     }
 
-    // 優化 4：和局絕對否決機制
+    // ==========================================
+    // 全新和局機制：變盤預測與破路分析
+    // ==========================================
     function getTieMechanismPrediction(history) {
         let lastTieIdx = history.lastIndexOf('T');
         if (lastTieIdx === -1) return { active: false };
         let recent10 = history.slice(-Math.min(history.length, 10));
         let tieCount = recent10.filter(x => x === 'T').length;
         
-        // 【機制更新】：和局密集，直接發送 vetoAll 強制全系統空倉
-        if (tieCount >= 2) {
-            return { active: true, target: 'NEUTRAL', vetoAll: true, confidence: 50, reason: `【全新機制：和局絕對否決】近 10 局內出現 ${tieCount} 次和局，物理慣性徹底斷裂，系統強制切斷所有預測！`, weight: 2.0 };
+        // 極端混沌盤：和局過於密集
+        if (tieCount >= 3) {
+            return { active: true, target: 'NEUTRAL', vetoAll: true, confidence: 50, reason: `【混沌絕對否決】近 10 局內出現 ${tieCount} 次和局，盤路已完全失序，系統強制切斷所有預測！`, weight: 2.0 };
         }
         
+        // 主動預測邏輯：針對上一局剛好是和局 (T) 時的變盤分析
         if (history[history.length - 1] === 'T') {
             let preTie = null, streak = 0;
             for (let i = history.length - 2; i >= 0; i--) {
@@ -333,12 +331,26 @@
                 }
             }
             if (!preTie) return { active: false };
-            if (streak >= 3) return { active: true, target: preTie==='B'?'P':'B', vetoAll: false, confidence: 88, reason: `【和局斷連】長連後遇和局，極易反轉。`, weight: 1.2 };
-            else return { active: true, target: preTie, vetoAll: false, confidence: 82, reason: `【和局反彈】震盪遇和局，高機率複製。`, weight: 1.1 };
+            
+            // 和局破龍：長龍後遇和，物理慣性截斷，強烈反打
+            if (streak >= 4) {
+                return { active: true, target: preTie==='B'?'P':'B', vetoAll: false, confidence: 95, reason: `【和局破龍】長連 (${streak}連) 後遇和局，物理慣性遭截斷，發動高勝率反打。`, weight: 1.5 };
+            } 
+            // 和局震盪反轉：單跳遇和，高機率變盤
+            else if (streak === 1) {
+                return { active: true, target: preTie==='B'?'P':'B', vetoAll: false, confidence: 85, reason: `【和局震盪反轉】單跳遇和局，變盤機率極高，順勢反打。`, weight: 1.2 };
+            } 
+            // 和局延續：短連遇和，趨勢未盡
+            else {
+                return { active: true, target: preTie, vetoAll: false, confidence: 80, reason: `【和局延續】短連 (${streak}連) 遇和局，趨勢未盡，高機率複製原路。`, weight: 1.0 };
+            }
         }
         return { active: false };
     }
 
+    // ==========================================
+    // 大龍物理極限臨界點反打機制
+    // ==========================================
     function analyzePatternCore(sequence) {
         if (!sequence || sequence.length < 3) return { target: 'NEUTRAL', confidence: 50, reason: '數據不足' };
         let matrix = buildRoadCols(sequence);
@@ -351,8 +363,10 @@
         let jumpCount = 0;
         for(let i = numCols - 1; i >= 0; i--) { if(colLens[i] === 1) jumpCount++; else break; }
 
-        if (curLen >= 8) return { target: 'NEUTRAL', confidence: 50, reason: `大龍物理極限，強制觀望。` };
-        if (curLen >= 6) return { target: lastItem, confidence: 95, reason: `大龍爆發順打。` };
+        // 【全新機制】大龍達到臨界點 (7連或以上)，不再強制觀望，改為觸發高信心反打
+        if (curLen >= 7) return { target: oppItem, confidence: 96, reason: `【大龍臨界點破路】長龍達到物理極限 (長度${curLen})，觸發強力反打機制！` };
+        
+        if (curLen >= 5) return { target: lastItem, confidence: 92, reason: `大龍爆發順打 (累積${curLen}連)。` };
         if (jumpCount >= 5) return { target: oppItem, confidence: 93, reason: `單跳龍反打。` };
         if (curLen >= 3) return { target: lastItem, confidence: 85, reason: `中短龍延續。` };
         
@@ -362,7 +376,7 @@
         if (numCols >= 3 && l3===2 && l2===2 && l1===1) return { target: lastItem, confidence: 85, reason: `2-2-1 補齊。` };
         if (numCols >= 3 && l3===1 && l2===1 && l1===1) return { target: oppItem, confidence: 88, reason: `短單跳 1-1-1反打。` };
         
-        return { target: 'NEUTRAL', confidence: 50, reason: '未符 7 大邏輯，觀望' };
+        return { target: 'NEUTRAL', confidence: 50, reason: '未符常規邏輯，觀望' };
     }
 
     function analyzeCoreWithMechanism(sequence) {
@@ -371,7 +385,6 @@
         let adjustedConf = base.confidence;
         let mechReason = "平穩區間。";
         
-        // 針對大路與下三路的自我修正
         if (vol.isChoppy && base.target === sequence[sequence.length-1]) {
             adjustedConf -= 20; 
             mechReason = `⚠️【絞殺盤偵測】近期高頻換向，系統強力壓制順打信心！`;
@@ -386,26 +399,30 @@
         return { target: base.target, confidence: adjustedConf, logicReason: base.reason, mechanismReason: mechReason, breakStrength: '中' };
     }
 
-    // 優化 1 & 3：動態權重與下三路自我否決
     function getAllCoresAnalysis(history) {
         let pure = history.filter(x => x !== 'T');
-        if (pure.length < 10) return Array(5).fill({ target: 'NEUTRAL', confidence: 50, logicReason: '數據不足', mechanismReason: '待命', weight: 1.0 });
+        
+        // 【修復的關鍵代碼】補齊5大核心的名稱與佔位資料，確保未滿 10 局時不會出現 undefined
+        if (pure.length < 10) return [
+            { name: '大路形態', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少10局', mechanismReason: '待命', weight: 1.0 },
+            { name: '大眼仔路', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少10局', mechanismReason: '待命', weight: 1.0 },
+            { name: '小路', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少10局', mechanismReason: '待命', weight: 1.0 },
+            { name: '曱甴路', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少10局', mechanismReason: '待命', weight: 1.0 },
+            { name: '和局動態機制', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少10局', mechanismReason: '待命', weight: 1.0 }
+        ];
         
         let vol = evaluateVolatility(pure);
         
-        // 核心 1: 大路
         let br = analyzeCoreWithMechanism(pure);
-        br.name = '大路形態'; br.weight = vol.isChoppy ? 0.8 : 1.2; // 震盪盤削弱大路權重
+        br.name = '大路形態'; br.weight = vol.isChoppy ? 0.8 : 1.2;
 
-        // 下三路處理與自我否決
         function getLowerRoad(offset, name, defaultWeight) {
             let seq = getDownThreeRoadSequence(pure, offset);
             if(seq.length < 3) return { name, target: 'NEUTRAL', confidence: 50, logicReason: '未成形', mechanismReason: '待命', weight: defaultWeight };
             let res = analyzeCoreWithMechanism(seq);
             
-            // 【優化3：下三路自我否決】若下三路信心平庸且處於震盪盤，直接捨棄不參與加權
             if (res.target !== 'NEUTRAL' && res.confidence < 82 && vol.isChoppy) {
-                return { name, target: 'NEUTRAL', confidence: 50, logicReason: res.logicReason, mechanismReason: `【自我否決】爛路期間該路訊號薄弱，為保勝率強制退出運算。`, weight: 0 };
+                return { name, target: 'NEUTRAL', confidence: 50, logicReason: res.logicReason, mechanismReason: `【自我否決】爛路期間訊號薄弱，強制退出運算。`, weight: 0 };
             }
             
             let colorB = getDownThreeRoadSequence(pure.concat(['B']), offset).pop();
@@ -413,9 +430,9 @@
             let actualTarget = 'NEUTRAL';
             if (colorB === res.target && colorP !== res.target) actualTarget = 'B';
             else if (colorP === res.target && colorB !== res.target) actualTarget = 'P';
-            else if (colorB === res.target && colorP === res.target) { actualTarget = 'B'; res.confidence -= 5; } // 莊優勢補償
+            else if (colorB === res.target && colorP === res.target) { actualTarget = 'B'; res.confidence -= 5; } 
             
-            return { name, target: actualTarget, confidence: res.confidence, logicReason: res.logicReason, mechanismReason: res.mechanismReason, weight: vol.isChoppy ? defaultWeight + 0.2 : defaultWeight }; // 震盪盤調高下三路權重
+            return { name, target: actualTarget, confidence: res.confidence, logicReason: res.logicReason, mechanismReason: res.mechanismReason, weight: vol.isChoppy ? defaultWeight + 0.2 : defaultWeight };
         }
 
         let e1 = getLowerRoad(1, '大眼仔路', 1.1);
@@ -423,7 +440,7 @@
         let e3 = getLowerRoad(3, '曱甴路', 0.9);
         
         let tie = getTieMechanismPrediction(history);
-        tie.name = '和局動態機制';
+        tie.name = '全新和局破路預測';
         if (!tie.active) tie = { name: tie.name, target: 'NEUTRAL', confidence: 50, logicReason: '無干擾', mechanismReason: '待命', weight: 1.0 };
         
         return [br, e1, e2, e3, tie];
@@ -435,7 +452,6 @@
         
         let cores = getAllCoresAnalysis(history);
         
-        // 【優化 4 實作】：和局絕對否決，阻斷所有常規運算
         if (cores[4].vetoAll) {
             return { target: 'NEUTRAL', reasonCode: 'TIE_VETO', reasonText: cores[4].reason };
         }
@@ -446,25 +462,24 @@
             if (c.target === 'P') { pScore += c.confidence * c.weight; pWeight += c.weight; valid++; }
         });
 
-        // 三路共震判定
         let lowers = [cores[1].target, cores[2].target, cores[3].target];
         let hasResonance = false, resTarget = null;
         if (lowers.every(t => t === 'B')) { hasResonance = true; resTarget = 'B'; bScore += 80; valid++; }
         if (lowers.every(t => t === 'P')) { hasResonance = true; resTarget = 'P'; pScore += 80; valid++; }
 
-        bScore *= 1.03; // 莊優勢
+        bScore *= 1.03; 
         
         let vol = evaluateVolatility(pure);
-        // 【優化 2 實作】：四級震盪盤嚴格空倉
-        if (vol.isChoppy && !hasResonance) {
+        if (vol.isChoppy && !hasResonance && valid < 3) {
             return { target: 'NEUTRAL', reasonCode: 'HIGH_VOLATILITY', bScore, pScore, volText: `【嚴格空倉】近15局出現 ${vol.chops} 次轉向。在無三路共振的絞殺盤中，系統強制防禦，保護本金。` };
         }
 
-        if (valid < 2 || Math.abs(bScore - pScore) < 35) return { target: 'NEUTRAL', reasonCode: 'DEFENSE', bScore, pScore };
+        if (valid < 1 || Math.abs(bScore - pScore) < 35) return { target: 'NEUTRAL', reasonCode: 'DEFENSE', bScore, pScore };
         
         let target = bScore > pScore ? 'B' : 'P';
         let conf = ((bScore > pScore ? bScore : pScore) / (bScore > pScore ? bWeight : pWeight) * 0.6 + 40).toFixed(1);
         if (hasResonance && target === resTarget) conf = Math.max(92, conf);
+        if (cores[0].confidence >= 95 || cores[4].confidence >= 95) conf = Math.max(90, conf); // 大龍反打與和局破路直接拉高總信心
         
         return { target, confidence: conf, bScore, pScore, valid, hasResonance };
     }
@@ -503,7 +518,6 @@
             }
             hList.appendChild(badge);
             
-            // 繪製和局斜線
             if (res === 'T' && badge.lastChild && badge.lastChild.className !== "tie-indicator") {
                 let tieLine = document.createElement("div");
                 tieLine.className = "tie-indicator";
@@ -512,14 +526,12 @@
         });
         hList.scrollLeft = hList.scrollWidth;
 
-        // 更新統計板
         document.getElementById("statWinRate").innerText = totalBets > 0 ? ((winCount/totalBets)*100).toFixed(1) + "%" : "0.0%";
         document.getElementById("statTotalBets").innerText = totalBets;
         document.getElementById("statWinCount").innerText = winCount;
         document.getElementById("statLossCount").innerText = lossCount;
         document.getElementById("statSkipCount").innerText = skipCount;
 
-        // 渲染全新大路與下三路
         function renderMatrix(id, seq, isBig) {
             let c = document.getElementById(id); c.innerHTML = "";
             buildRoadCols(seq).forEach(col => {
@@ -539,7 +551,6 @@
         renderMatrix("roadSmall", getDownThreeRoadSequence(pure, 2));
         renderMatrix("roadCockroach", getDownThreeRoadSequence(pure, 3));
 
-        // 分析與最終預測輸出
         let grid = document.getElementById("analysisGrid"); grid.innerHTML = "";
         let cores = getAllCoresAnalysis(baccaratHistory);
         cores.forEach(res => {
@@ -560,7 +571,7 @@
         if (f.reasonCode === 'WAIT') {
             ft.innerText = "觀望"; ft.className = "final-target target-N"; fp.innerText = "累積數據中"; fr.innerText = "需至少10局有效數據。"; fb.innerHTML = "";
         } else if (f.reasonCode === 'TIE_VETO') {
-            ft.innerText = "觀望 (混沌期)"; ft.className = "final-target target-N"; fp.innerText = "和局絕對否決"; fr.innerText = f.reasonText; fb.innerHTML = `<div class="bet-advice wait">嚴格空倉</div>`;
+            ft.innerText = "觀望 (盤路失序)"; ft.className = "final-target target-N"; fp.innerText = "和局混沌保護"; fr.innerText = f.reasonText; fb.innerHTML = `<div class="bet-advice wait">嚴格空倉</div>`;
         } else if (f.reasonCode === 'HIGH_VOLATILITY') {
             ft.innerText = "觀望 (高頻絞殺)"; ft.className = "final-target target-N"; fp.innerText = "震盪過濾啟動"; fr.innerText = f.volText; fb.innerHTML = `<div class="bet-advice wait">嚴格空倉</div>`;
         } else if (f.reasonCode === 'DEFENSE') {
@@ -568,7 +579,7 @@
         } else {
             ft.innerText = f.target === 'B' ? "莊 (B)" : "閒 (P)"; ft.className = `final-target target-${f.target}`; fp.innerText = `綜合可信度 ${f.confidence}%`;
             fr.innerText = `${f.hasResonance ? "🔥 三路共振爆發！\n" : ""}莊家總分 ${f.bScore.toFixed(1)} vs 閒家總分 ${f.pScore.toFixed(1)}。成功觸發 ${f.valid} 個核心！`;
-            fb.innerHTML = `<div class="bet-advice">建議注碼：${f.hasResonance || f.confidence > 90 ? "3 單位 (重注)" : "1-2 單位 (平注)"}</div>`;
+            fb.innerHTML = `<div class="bet-advice">建議注碼：${f.hasResonance || f.confidence >= 90 ? "3 單位 (強力訊號)" : "1-2 單位 (平注)"}</div>`;
         }
     }
     updateUI();
