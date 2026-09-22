@@ -26,6 +26,7 @@
         .hud-stats-bar {display: flex; gap: 16px; justify-content: center; font-size: 0.85rem; font-weight: bold; background: rgba(0, 0, 0, 0.4); padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color);}
         .hud-b { color: var(--banker-color); } .hud-p { color: var(--player-color); } .hud-t { color: var(--tie-color); }
         
+        /* 珠盤路 */
         .history-list {display: grid; grid-template-rows: repeat(6, auto); grid-auto-flow: column; grid-auto-columns: minmax(36px, auto); gap: 4px; min-height: 100px; overflow-x: auto; align-content: start; padding-bottom: 6px;}
         .badge-box {display: flex; align-items: center; justify-content: center; border-radius: 50%; color: white; font-size: 0.8rem; font-weight: bold; box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), 0 2px 4px rgba(0,0,0,0.4); width: 36px; height: 36px; min-width: 36px; position: relative;}
         .pred-icon {position: absolute; bottom: -2px; right: -2px; font-size: 0.6rem; background: #000; border-radius: 50%; padding: 1px; width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.5); line-height: 1;}
@@ -33,16 +34,22 @@
         .badge-box-P { background: radial-gradient(circle at 30% 30%, #60a5fa, var(--player-color)); }
         .badge-box-T { background: radial-gradient(circle at 30% 30%, #4ade80, var(--tie-color)); }
         
+        /* 真實碰底轉彎網格系統 */
         .down-roads-wrapper {display: flex; flex-direction: column; gap: 6px; margin-top: 4px;}
         .down-road-row {display: flex; align-items: flex-start; gap: 10px; background: rgba(255, 255, 255, 0.015); padding: 6px 10px; border-radius: 6px;}
         .down-road-label {font-size: 0.8rem; color: var(--text-muted); min-width: 55px; margin-top: 2px; font-weight: bold;}
-        .down-road-matrix {display: flex; gap: 2px; overflow-x: auto; flex: 1; align-items: flex-start; height: 86px;}
-        .road-col {display: flex; flex-direction: column; gap: 2px; max-height: 86px; flex-wrap: wrap;}
+        .down-road-matrix {display: flex; gap: 1px; overflow-x: auto; flex: 1; align-items: flex-start; height: 84px;}
+        .road-col {display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; width: 12px;}
+        .type-bigroad .road-col { width: 14px; }
+        .road-cell {width: 12px; height: 12px; display: flex; align-items: center; justify-content: center; position: relative;}
+        .type-bigroad .road-cell { width: 14px; height: 14px; }
         
-        .mini-dot {width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex-shrink: 0; position: relative;}
+        .mini-dot {width: 100%; height: 100%; border-radius: 50%; display: inline-block; position: relative;}
         .mini-dot.empty { background-color: transparent; border: 1px dashed var(--border-color); }
         .type-bigroad .mini-dot.red { border: 2px solid var(--banker-color); background-color: transparent; }
         .type-bigroad .mini-dot.blue { border: 2px solid var(--player-color); background-color: transparent; }
+        .type-bigroad .mini-dot.green { border: 2px solid var(--tie-color); background-color: transparent; }
+        
         .type-bigeye .mini-dot.red { border: 2px solid var(--banker-color); background-color: transparent; }
         .type-bigeye .mini-dot.blue { border: 2px solid var(--player-color); background-color: transparent; }
         .type-small .mini-dot.red { background-color: var(--banker-color); }
@@ -50,9 +57,12 @@
         .type-roach .mini-dot.red { background: linear-gradient(45deg, transparent 40%, var(--banker-color) 40%, var(--banker-color) 60%, transparent 60%); border: 1px solid var(--banker-color); }
         .type-roach .mini-dot.blue { background: linear-gradient(45deg, transparent 40%, var(--player-color) 40%, var(--player-color) 60%, transparent 60%); border: 1px solid var(--player-color); }
         
+        /* 和局斜線疊加樣式 */
         .tie-indicator { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
         .tie-indicator::before { content: ""; position: absolute; top: 50%; left: -10%; width: 120%; height: 2px; background-color: var(--tie-color); transform: translateY(-50%) rotate(-45deg); }
+        .tie-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 9px; color: var(--tie-color); font-weight: bold; background: rgba(0,0,0,0.7); border-radius: 50%; width: 12px; height: 12px; display: flex; align-items: center; justify-content: center; z-index: 3;}
         
+        /* 問路區域 */
         .ask-road-container {display: flex; flex-direction: column; background: rgba(0, 0, 0, 0.3); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 8px;}
         .ask-road-title {text-align: center; font-size: 0.85rem; color: var(--accent-gold); font-weight: bold; margin-bottom: 8px; border-bottom: 1px dashed var(--border-color); padding-bottom: 4px;}
         .ask-road-grid { display: flex; justify-content: space-around; }
@@ -62,6 +72,7 @@
         .ask-label.player { color: var(--player-color); }
         .ask-dots { display: flex; gap: 8px; align-items: center; }
 
+        /* UI 按鈕區 */
         .direct-input-container {display: flex; flex-direction: column; gap: 10px; align-items: center; width: 100%;}
         .direct-title { font-size: 0.9rem; color: var(--text-muted); }
         .btn-input-group {display: flex; gap: 12px; width: 100%; justify-content: center; max-width: 580px;}
@@ -78,6 +89,7 @@
         .batch-input-group {display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 4px;}
         .batch-input-group input {background-color: rgba(0, 0, 0, 0.3); border: 1px solid var(--border-color); color: var(--text-color); padding: 8px 12px; border-radius: 6px; flex: 1; max-width: 520px;}
         
+        /* 儀表板區域 */
         .dashboard { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; margin-bottom: 20px; }
         @media (max-width: 820px) { .dashboard { grid-template-columns: 1fr; } }
         
@@ -119,13 +131,13 @@
 
 <header>
     <h1>百家樂多維路單分析與旗艦預測系統</h1>
-    <p aria-live="polite">終極神級精算版 • 大龍極限反打 / 破路自否決 / 全新和局變盤預測</p>
+    <p aria-live="polite">終極神級精算版 • 完美碰底轉彎矩陣 / 和局疊加疊影 / 大龍反打與和局重構</p>
 </header>
 
 <div class="panel-container">
     <div class="history-container">
         <div class="history-title">
-            <span>線上百家樂標準路單面板 (珠盤路與大路)</span>
+            <span>線上百家樂標準路單面板 (珠盤路與四大路)</span>
             <span id="beadCountInfo" style="color:var(--accent-gold); font-weight:bold;">總局數: 0/100 (有效: 0/10)</span>
         </div>
         
@@ -258,44 +270,91 @@
         updateUI();
     }
 
-    // 抽象列與網格生成 (包含和局斜線)
-    function buildRoadCols(sequence) {
-        if (!sequence || sequence.length === 0) return [];
-        let cols = [], cur = [sequence[0]], color = sequence[0];
-        for (let i = 1; i < sequence.length; i++) {
-            if (sequence[i] === color) cur.push(sequence[i]);
-            else { cols.push(cur); cur = [sequence[i]]; color = sequence[i]; }
+    // ==========================================
+    // 邏輯抽象列 (僅用於 AI 分析核心，不負責渲染轉彎)
+    // ==========================================
+    function buildLogicalCols(pureHistory) {
+        if (!pureHistory || pureHistory.length === 0) return [];
+        let cols = [], cur = [pureHistory[0]];
+        for (let i = 1; i < pureHistory.length; i++) {
+            if (pureHistory[i] === pureHistory[i-1]) cur.push(pureHistory[i]);
+            else { cols.push(cur); cur = [pureHistory[i]]; }
         }
         if (cur.length > 0) cols.push(cur);
         return cols;
     }
     
-    function getRoadColor(matrix, col, row, offset) {
-        if (row > 0) {
-            let tCol = col - offset; if (tCol < 0) return null;
-            let tLen = matrix[tCol] ? matrix[tCol].length : 0;
-            return row < tLen ? 'RED' : (row === tLen ? 'BLUE' : 'RED');
-        } else {
-            let tCol1 = col - 1, tCol2 = col - 1 - offset;
-            if (tCol2 < 0) return null;
-            let len1 = matrix[tCol1] ? matrix[tCol1].length : 0;
-            let len2 = matrix[tCol2] ? matrix[tCol2].length : 0;
-            return len1 === len2 ? 'RED' : 'BLUE';
-        }
-    }
-    
-    function getDownThreeRoadSequence(pureHistory, offset) {
-        let seq = [], mat = buildRoadCols(pureHistory);
+    // 生成下三路的紅藍陣列 (1D Sequence)
+    function getDerivedRoadSequence(pureHistory, offset) {
+        let seq = [], mat = buildLogicalCols(pureHistory);
         if (mat.length === 0) return [];
         for (let col = 0; col < mat.length; col++) {
             for (let row = 0; row < mat[col].length; row++) {
-                let color = getRoadColor(mat, col, row, offset);
-                if (color) seq.push(color);
+                if (row > 0) {
+                    let tCol = col - offset; if (tCol < 0) continue;
+                    let tLen = mat[tCol] ? mat[tCol].length : 0;
+                    seq.push(row < tLen ? 'RED' : (row === tLen ? 'BLUE' : 'RED'));
+                } else {
+                    let tCol1 = col - 1, tCol2 = col - 1 - offset;
+                    if (tCol2 < 0) continue;
+                    let len1 = mat[tCol1] ? mat[tCol1].length : 0;
+                    let len2 = mat[tCol2] ? mat[tCol2].length : 0;
+                    seq.push(len1 === len2 ? 'RED' : 'BLUE');
+                }
             }
         }
         return seq;
     }
 
+    // ==========================================
+    // 全新：真實二維網格算法 (碰底、碰欄轉彎與和局疊加)
+    // ==========================================
+    function buildTrueMatrix(sequence, isBigRoad) {
+        let grid = []; // grid[col][row]
+        let curCol = 0, curRow = 0, lastColor = null, tieCount = 0;
+
+        for (let i = 0; i < sequence.length; i++) {
+            let item = sequence[i];
+
+            // 處理和局疊加 (僅大路適用)
+            if (isBigRoad && item === 'T') {
+                if (lastColor === null) tieCount++; // 開局就是和局
+                else grid[curCol][curRow].ties = (grid[curCol][curRow].ties || 0) + 1; // 疊加在上一手
+                continue;
+            }
+
+            // 處理換列與轉彎
+            if (item !== lastColor) {
+                // 換色，尋找第一排的空位
+                curCol = 0;
+                while (grid[curCol] && grid[curCol][0] !== undefined) curCol++;
+                curRow = 0;
+            } else {
+                // 同色向下延伸；若碰到底 (row 5) 或是下方已有別的紀錄 (碰欄)，則向右轉彎
+                if (curRow + 1 < 6 && (!grid[curCol] || grid[curCol][curRow + 1] === undefined)) {
+                    curRow++;
+                } else {
+                    curCol++; // 轉彎
+                }
+            }
+
+            if (!grid[curCol]) grid[curCol] = new Array(6);
+            grid[curCol][curRow] = { val: item, ties: tieCount };
+            tieCount = 0; // 開局的連續和局放完後歸零
+            lastColor = item;
+        }
+
+        // 處理整靴目前只有開出和局的極端狀態
+        if (isBigRoad && lastColor === null && tieCount > 0) {
+            if (!grid[0]) grid[0] = new Array(6);
+            grid[0][0] = { val: 'T', ties: tieCount };
+        }
+        return grid;
+    }
+
+    // ==========================================
+    // 動態 AI 核心與和局機制
+    // ==========================================
     function evaluateVolatility(pureHistory) {
         if (pureHistory.length < 10) return { chops: 0, isChoppy: false };
         let recent15 = pureHistory.slice(-15);
@@ -306,21 +365,14 @@
         return { chops: directionChanges, isChoppy: (directionChanges / (recent15.length - 1)) >= 0.6 };
     }
 
-    // ==========================================
-    // 全新和局機制：變盤預測與破路分析
-    // ==========================================
     function getTieMechanismPrediction(history) {
         let lastTieIdx = history.lastIndexOf('T');
         if (lastTieIdx === -1) return { active: false };
         let recent10 = history.slice(-Math.min(history.length, 10));
         let tieCount = recent10.filter(x => x === 'T').length;
         
-        // 極端混沌盤：和局過於密集
-        if (tieCount >= 3) {
-            return { active: true, target: 'NEUTRAL', vetoAll: true, confidence: 50, reason: `【混沌絕對否決】近 10 局內出現 ${tieCount} 次和局，盤路已完全失序，系統強制切斷所有預測！`, weight: 2.0 };
-        }
+        if (tieCount >= 3) return { active: true, target: 'NEUTRAL', vetoAll: true, confidence: 50, reason: `【混沌絕對否決】近 10 局內出現 ${tieCount} 次和局，盤路已完全失序，強制切斷預測！`, weight: 2.0 };
         
-        // 主動預測邏輯：針對上一局剛好是和局 (T) 時的變盤分析
         if (history[history.length - 1] === 'T') {
             let preTie = null, streak = 0;
             for (let i = history.length - 2; i >= 0; i--) {
@@ -332,28 +384,16 @@
             }
             if (!preTie) return { active: false };
             
-            // 和局破龍：長龍後遇和，物理慣性截斷，強烈反打
-            if (streak >= 4) {
-                return { active: true, target: preTie==='B'?'P':'B', vetoAll: false, confidence: 95, reason: `【和局破龍】長連 (${streak}連) 後遇和局，物理慣性遭截斷，發動高勝率反打。`, weight: 1.5 };
-            } 
-            // 和局震盪反轉：單跳遇和，高機率變盤
-            else if (streak === 1) {
-                return { active: true, target: preTie==='B'?'P':'B', vetoAll: false, confidence: 85, reason: `【和局震盪反轉】單跳遇和局，變盤機率極高，順勢反打。`, weight: 1.2 };
-            } 
-            // 和局延續：短連遇和，趨勢未盡
-            else {
-                return { active: true, target: preTie, vetoAll: false, confidence: 80, reason: `【和局延續】短連 (${streak}連) 遇和局，趨勢未盡，高機率複製原路。`, weight: 1.0 };
-            }
+            if (streak >= 4) return { active: true, target: preTie==='B'?'P':'B', vetoAll: false, confidence: 95, reason: `【和局破龍】長連 (${streak}連) 後遇和局，物理慣性遭截斷，發動高勝率反打。`, weight: 1.5 };
+            else if (streak === 1) return { active: true, target: preTie==='B'?'P':'B', vetoAll: false, confidence: 85, reason: `【和局震盪反轉】單跳遇和局，變盤機率極高，順勢反打。`, weight: 1.2 };
+            else return { active: true, target: preTie, vetoAll: false, confidence: 80, reason: `【和局延續】短連 (${streak}連) 遇和局，趨勢未盡，高機率複製原路。`, weight: 1.0 };
         }
         return { active: false };
     }
 
-    // ==========================================
-    // 大龍物理極限臨界點反打機制
-    // ==========================================
     function analyzePatternCore(sequence) {
         if (!sequence || sequence.length < 3) return { target: 'NEUTRAL', confidence: 50, reason: '數據不足' };
-        let matrix = buildRoadCols(sequence);
+        let matrix = buildLogicalCols(sequence);
         let numCols = matrix.length;
         let colLens = matrix.map(c => c.length);
         let curLen = colLens[numCols - 1];
@@ -363,9 +403,7 @@
         let jumpCount = 0;
         for(let i = numCols - 1; i >= 0; i--) { if(colLens[i] === 1) jumpCount++; else break; }
 
-        // 【全新機制】大龍達到臨界點 (7連或以上)，不再強制觀望，改為觸發高信心反打
         if (curLen >= 7) return { target: oppItem, confidence: 96, reason: `【大龍臨界點破路】長龍達到物理極限 (長度${curLen})，觸發強力反打機制！` };
-        
         if (curLen >= 5) return { target: lastItem, confidence: 92, reason: `大龍爆發順打 (累積${curLen}連)。` };
         if (jumpCount >= 5) return { target: oppItem, confidence: 93, reason: `單跳龍反打。` };
         if (curLen >= 3) return { target: lastItem, confidence: 85, reason: `中短龍延續。` };
@@ -401,23 +439,20 @@
 
     function getAllCoresAnalysis(history) {
         let pure = history.filter(x => x !== 'T');
-        
-        // 【修復的關鍵代碼】補齊5大核心的名稱與佔位資料，確保未滿 10 局時不會出現 undefined
         if (pure.length < 10) return [
             { name: '大路形態', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少10局', mechanismReason: '待命', weight: 1.0 },
             { name: '大眼仔路', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少10局', mechanismReason: '待命', weight: 1.0 },
             { name: '小路', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少10局', mechanismReason: '待命', weight: 1.0 },
             { name: '曱甴路', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少10局', mechanismReason: '待命', weight: 1.0 },
-            { name: '和局動態機制', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少10局', mechanismReason: '待命', weight: 1.0 }
+            { name: '全新和局破路', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少10局', mechanismReason: '待命', weight: 1.0 }
         ];
         
         let vol = evaluateVolatility(pure);
-        
         let br = analyzeCoreWithMechanism(pure);
         br.name = '大路形態'; br.weight = vol.isChoppy ? 0.8 : 1.2;
 
         function getLowerRoad(offset, name, defaultWeight) {
-            let seq = getDownThreeRoadSequence(pure, offset);
+            let seq = getDerivedRoadSequence(pure, offset);
             if(seq.length < 3) return { name, target: 'NEUTRAL', confidence: 50, logicReason: '未成形', mechanismReason: '待命', weight: defaultWeight };
             let res = analyzeCoreWithMechanism(seq);
             
@@ -425,8 +460,8 @@
                 return { name, target: 'NEUTRAL', confidence: 50, logicReason: res.logicReason, mechanismReason: `【自我否決】爛路期間訊號薄弱，強制退出運算。`, weight: 0 };
             }
             
-            let colorB = getDownThreeRoadSequence(pure.concat(['B']), offset).pop();
-            let colorP = getDownThreeRoadSequence(pure.concat(['P']), offset).pop();
+            let colorB = getDerivedRoadSequence(pure.concat(['B']), offset).pop();
+            let colorP = getDerivedRoadSequence(pure.concat(['P']), offset).pop();
             let actualTarget = 'NEUTRAL';
             if (colorB === res.target && colorP !== res.target) actualTarget = 'B';
             else if (colorP === res.target && colorB !== res.target) actualTarget = 'P';
@@ -451,10 +486,7 @@
         if (pure.length < 10) return { target: 'NEUTRAL', reasonCode: 'WAIT' };
         
         let cores = getAllCoresAnalysis(history);
-        
-        if (cores[4].vetoAll) {
-            return { target: 'NEUTRAL', reasonCode: 'TIE_VETO', reasonText: cores[4].reason };
-        }
+        if (cores[4].vetoAll) return { target: 'NEUTRAL', reasonCode: 'TIE_VETO', reasonText: cores[4].reason };
 
         let bScore = 0, pScore = 0, valid = 0, bWeight = 0, pWeight = 0;
         cores.forEach(c => {
@@ -471,7 +503,7 @@
         
         let vol = evaluateVolatility(pure);
         if (vol.isChoppy && !hasResonance && valid < 3) {
-            return { target: 'NEUTRAL', reasonCode: 'HIGH_VOLATILITY', bScore, pScore, volText: `【嚴格空倉】近15局出現 ${vol.chops} 次轉向。在無三路共振的絞殺盤中，系統強制防禦，保護本金。` };
+            return { target: 'NEUTRAL', reasonCode: 'HIGH_VOLATILITY', bScore, pScore, volText: `【嚴格空倉】近15局出現 ${vol.chops} 次轉向。無三路共振絞殺盤，防禦保護本金。` };
         }
 
         if (valid < 1 || Math.abs(bScore - pScore) < 35) return { target: 'NEUTRAL', reasonCode: 'DEFENSE', bScore, pScore };
@@ -479,11 +511,14 @@
         let target = bScore > pScore ? 'B' : 'P';
         let conf = ((bScore > pScore ? bScore : pScore) / (bScore > pScore ? bWeight : pWeight) * 0.6 + 40).toFixed(1);
         if (hasResonance && target === resTarget) conf = Math.max(92, conf);
-        if (cores[0].confidence >= 95 || cores[4].confidence >= 95) conf = Math.max(90, conf); // 大龍反打與和局破路直接拉高總信心
+        if (cores[0].confidence >= 95 || cores[4].confidence >= 95) conf = Math.max(90, conf);
         
         return { target, confidence: conf, bScore, pScore, valid, hasResonance };
     }
 
+    // ==========================================
+    // UI 主渲染更新區塊
+    // ==========================================
     function updateUI() {
         let hList = document.getElementById("historyList");
         hList.innerHTML = "";
@@ -496,6 +531,8 @@
         document.getElementById("beadCountInfo").innerText = `總局數: ${baccaratHistory.length}/${MAX_HANDS} (有效: ${countB+countP}/10)`;
 
         let totalBets = 0, winCount = 0, lossCount = 0, skipCount = 0;
+        
+        // 珠盤路 (保留原始設計不變)
         baccaratHistory.forEach((res, i) => {
             let badge = document.createElement("div");
             badge.className = `badge-box badge-box-${res}`;
@@ -517,12 +554,6 @@
                 }
             }
             hList.appendChild(badge);
-            
-            if (res === 'T' && badge.lastChild && badge.lastChild.className !== "tie-indicator") {
-                let tieLine = document.createElement("div");
-                tieLine.className = "tie-indicator";
-                badge.appendChild(tieLine);
-            }
         });
         hList.scrollLeft = hList.scrollWidth;
 
@@ -532,25 +563,59 @@
         document.getElementById("statLossCount").innerText = lossCount;
         document.getElementById("statSkipCount").innerText = skipCount;
 
-        function renderMatrix(id, seq, isBig) {
-            let c = document.getElementById(id); c.innerHTML = "";
-            buildRoadCols(seq).forEach(col => {
-                let d = document.createElement("div"); d.className = "road-col";
-                col.forEach(item => {
-                    let s = document.createElement("span");
-                    s.className = `mini-dot ${item === 'B' || item === 'RED' ? 'red' : (item === 'P' || item === 'BLUE' ? 'blue' : 'green')}`;
-                    d.appendChild(s);
-                });
-                c.appendChild(d);
-            });
-            c.scrollLeft = c.scrollWidth;
-        }
-        let pure = baccaratHistory.filter(x => x !== 'T');
-        renderMatrix("roadBigRoad", baccaratHistory, true);
-        renderMatrix("roadBigEye", getDownThreeRoadSequence(pure, 1));
-        renderMatrix("roadSmall", getDownThreeRoadSequence(pure, 2));
-        renderMatrix("roadCockroach", getDownThreeRoadSequence(pure, 3));
+        // 全新 2D 矩陣網格渲染
+        function renderTrueMatrixDOM(id, grid, isBigRoad) {
+            let container = document.getElementById(id);
+            container.innerHTML = "";
+            let maxCols = Math.max(25, grid.length + 2); // 最少保留25行確保版面不跑版
 
+            for (let c = 0; c < maxCols; c++) {
+                let colDiv = document.createElement("div");
+                colDiv.className = "road-col";
+                
+                for (let r = 0; r < 6; r++) {
+                    let cellDiv = document.createElement("div");
+                    cellDiv.className = "road-cell";
+                    let data = grid[c] ? grid[c][r] : undefined;
+
+                    if (data !== undefined) {
+                        let dot = document.createElement("span");
+                        let colorClass = "";
+                        if (isBigRoad) colorClass = data.val === 'B' ? 'red' : (data.val === 'P' ? 'blue' : 'green');
+                        else colorClass = (data.val === 'RED' || data.val === 'red') ? 'red' : 'blue';
+                        
+                        dot.className = `mini-dot ${colorClass}`;
+                        
+                        // 和局綠斜線疊加 (僅大路)
+                        if (isBigRoad && data.ties > 0) {
+                            let tieIndicator = document.createElement("div");
+                            tieIndicator.className = "tie-indicator";
+                            if (data.ties > 1) {
+                                let tieText = document.createElement("span");
+                                tieText.className = "tie-text";
+                                tieText.innerText = data.ties;
+                                tieIndicator.appendChild(tieText);
+                            }
+                            dot.appendChild(tieIndicator);
+                        }
+                        cellDiv.appendChild(dot);
+                    }
+                    colDiv.appendChild(cellDiv);
+                }
+                container.appendChild(colDiv);
+            }
+            container.scrollLeft = container.scrollWidth;
+        }
+
+        let pure = baccaratHistory.filter(x => x !== 'T');
+        // 大路 (傳入完整歷史紀錄，讓算法疊加和局)
+        renderTrueMatrixDOM("roadBigRoad", buildTrueMatrix(baccaratHistory, true), true);
+        // 下三路 (傳入推導出的紅藍序列)
+        renderTrueMatrixDOM("roadBigEye", buildTrueMatrix(getDerivedRoadSequence(pure, 1), false), false);
+        renderTrueMatrixDOM("roadSmall", buildTrueMatrix(getDerivedRoadSequence(pure, 2), false), false);
+        renderTrueMatrixDOM("roadCockroach", buildTrueMatrix(getDerivedRoadSequence(pure, 3), false), false);
+
+        // 儀表板
         let grid = document.getElementById("analysisGrid"); grid.innerHTML = "";
         let cores = getAllCoresAnalysis(baccaratHistory);
         cores.forEach(res => {
