@@ -3,180 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; frame-ancestors 'none';">
     <title>百家樂多維路單分析與旗艦預測系統 (終極神級精算版)</title>
     <style>
         :root {
-            --bg-color: #0b0f19;
-            --card-bg: #151c2f;
-            --text-color: #f1f5f9;
-            --text-muted: #94a3b8;
-            --banker-color: #dc2626;
-            --player-color: #2563eb;
-            --tie-color: #16a34a;
-            --border-color: #1e293b;
-            --accent-gold: #fbbf24;
-            --win-color: #10b981;
-            --loss-color: #f43f5e;
-            --weight-color: #d8b4fe;
-            --weight-bg: rgba(168, 85, 247, 0.15);
+            --bg-color: #0b0f19; --card-bg: #151c2f; --text-color: #f1f5f9; --text-muted: #94a3b8;
+            --banker-color: #dc2626; --player-color: #2563eb; --tie-color: #16a34a; 
+            --border-color: #1e293b; --accent-gold: #fbbf24; --win-color: #10b981; 
+            --loss-color: #f43f5e; --weight-color: #d8b4fe; --weight-bg: rgba(168, 85, 247, 0.15); 
             --resonance-color: #f97316;
         }
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        }
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            padding: 16px;
-            max-width: 1280px;
-            margin: 0 auto;
-        }
-        header {
-            text-align: center;
-            margin-bottom: 16px;
-        }
-        header h1 {
-            font-size: 1.6rem;
-            color: var(--accent-gold);
-            margin-bottom: 4px;
-        }
-        header p {
-            color: var(--text-muted);
-            font-size: 0.85rem;
-        }
-        .panel-container {
-            background-color: var(--card-bg);
-            padding: 16px;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            margin-bottom: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-        }
-        .history-container {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            background: rgba(0, 0, 0, 0.25);
-            padding: 14px;
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-        }
-        .history-title {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 8px;
-        }
-        .hud-stats-bar {
-            display: flex;
-            gap: 16px;
-            justify-content: center;
-            font-size: 0.85rem;
-            font-weight: bold;
-            background: rgba(0, 0, 0, 0.4);
-            padding: 6px 12px;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-        }
-        .hud-b { color: var(--banker-color); }
-        .hud-p { color: var(--player-color); }
-        .hud-t { color: var(--tie-color); }
-        .history-list {
-            display: grid;
-            grid-template-rows: repeat(6, auto);
-            grid-auto-flow: column;
-            grid-auto-columns: minmax(36px, auto);
-            gap: 4px;
-            min-height: 100px;
-            overflow-x: auto;
-            align-content: start;
-            padding-bottom: 6px;
-        }
-        .badge-box {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            color: white;
-            font-size: 0.8rem;
-            font-weight: bold;
-            box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), 0 2px 4px rgba(0,0,0,0.4);
-            width: 36px;
-            height: 36px;
-            min-width: 36px;
-            position: relative;
-        }
-        .pred-icon {
-            position: absolute;
-            bottom: -2px;
-            right: -2px;
-            font-size: 0.6rem;
-            background: #000;
-            border-radius: 50%;
-            padding: 1px;
-            width: 14px;
-            height: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
-            line-height: 1;
-        }
+        * {box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;}
+        body {background-color: var(--bg-color); color: var(--text-color); padding: 16px; max-width: 1280px; margin: 0 auto; padding-bottom: 80px;}
+        header {text-align: center; margin-bottom: 16px;}
+        header h1 {font-size: 1.6rem; color: var(--accent-gold); margin-bottom: 4px;}
+        header p {color: var(--text-muted); font-size: 0.85rem;}
+        
+        .panel-container {background-color: var(--card-bg); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);}
+        .history-container {display: flex; flex-direction: column; gap: 8px; background: rgba(0, 0, 0, 0.25); padding: 14px; border-radius: 10px; border: 1px solid var(--border-color);}
+        .history-title {font-size: 0.9rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;}
+        
+        .hud-stats-bar {display: flex; gap: 16px; justify-content: center; font-size: 0.85rem; font-weight: bold; background: rgba(0, 0, 0, 0.4); padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color);}
+        .hud-b { color: var(--banker-color); } .hud-p { color: var(--player-color); } .hud-t { color: var(--tie-color); }
+        
+        .history-list {display: grid; grid-template-rows: repeat(6, auto); grid-auto-flow: column; grid-auto-columns: minmax(36px, auto); gap: 4px; min-height: 100px; overflow-x: auto; align-content: start; padding-bottom: 6px;}
+        .badge-box {display: flex; align-items: center; justify-content: center; border-radius: 50%; color: white; font-size: 0.8rem; font-weight: bold; box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), 0 2px 4px rgba(0,0,0,0.4); width: 36px; height: 36px; min-width: 36px; position: relative;}
+        .pred-icon {position: absolute; bottom: -2px; right: -2px; font-size: 0.6rem; background: #000; border-radius: 50%; padding: 1px; width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.5); line-height: 1;}
         .badge-box-B { background: radial-gradient(circle at 30% 30%, #f87171, var(--banker-color)); }
         .badge-box-P { background: radial-gradient(circle at 30% 30%, #60a5fa, var(--player-color)); }
         .badge-box-T { background: radial-gradient(circle at 30% 30%, #4ade80, var(--tie-color)); }
-        .down-roads-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            margin-top: 4px;
-        }
-        .down-road-row {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            background: rgba(255, 255, 255, 0.015);
-            padding: 6px 10px;
-            border-radius: 6px;
-        }
-        .down-road-label {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            min-width: 55px;
-            margin-top: 2px;
-            font-weight: bold;
-        }
-        .down-road-matrix {
-            display: flex;
-            gap: 2px;
-            overflow-x: auto;
-            flex: 1;
-            align-items: flex-start;
-            height: 86px;
-        }
-        .road-col {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            max-height: 86px;
-            flex-wrap: wrap;
-        }
-        .mini-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            display: inline-block;
-            flex-shrink: 0;
-        }
+        
+        .down-roads-wrapper {display: flex; flex-direction: column; gap: 6px; margin-top: 4px;}
+        .down-road-row {display: flex; align-items: flex-start; gap: 10px; background: rgba(255, 255, 255, 0.015); padding: 6px 10px; border-radius: 6px;}
+        .down-road-label {font-size: 0.8rem; color: var(--text-muted); min-width: 55px; margin-top: 2px; font-weight: bold;}
+        .down-road-matrix {display: flex; gap: 2px; overflow-x: auto; flex: 1; align-items: flex-start; height: 86px;}
+        .road-col {display: flex; flex-direction: column; gap: 2px; max-height: 86px; flex-wrap: wrap;}
+        
+        .mini-dot {width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex-shrink: 0; position: relative;}
         .mini-dot.empty { background-color: transparent; border: 1px dashed var(--border-color); }
         .type-bigroad .mini-dot.red { border: 2px solid var(--banker-color); background-color: transparent; }
         .type-bigroad .mini-dot.blue { border: 2px solid var(--player-color); background-color: transparent; }
@@ -187,152 +50,91 @@
         .type-roach .mini-dot.red { background: linear-gradient(45deg, transparent 40%, var(--banker-color) 40%, var(--banker-color) 60%, transparent 60%); border: 1px solid var(--banker-color); }
         .type-roach .mini-dot.blue { background: linear-gradient(45deg, transparent 40%, var(--player-color) 40%, var(--player-color) 60%, transparent 60%); border: 1px solid var(--player-color); }
         
-        .ask-road-container {
-            display: flex; flex-direction: column; background: rgba(0, 0, 0, 0.3);
-            padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 8px;
-        }
-        .ask-road-title {
-            text-align: center; font-size: 0.85rem; color: var(--accent-gold); font-weight: bold;
-            margin-bottom: 8px; border-bottom: 1px dashed var(--border-color); padding-bottom: 4px;
-        }
+        .tie-indicator { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+        .tie-indicator::before { content: ""; position: absolute; top: 50%; left: -10%; width: 120%; height: 2px; background-color: var(--tie-color); transform: translateY(-50%) rotate(-45deg); }
+        
+        .ask-road-container {display: flex; flex-direction: column; background: rgba(0, 0, 0, 0.3); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 8px;}
+        .ask-road-title {text-align: center; font-size: 0.85rem; color: var(--accent-gold); font-weight: bold; margin-bottom: 8px; border-bottom: 1px dashed var(--border-color); padding-bottom: 4px;}
         .ask-road-grid { display: flex; justify-content: space-around; }
         .ask-col { display: flex; flex-direction: column; align-items: center; gap: 8px; }
         .ask-label { font-size: 0.85rem; font-weight: bold; }
         .ask-label.banker { color: var(--banker-color); }
         .ask-label.player { color: var(--player-color); }
         .ask-dots { display: flex; gap: 8px; align-items: center; }
-        .direct-input-container {
-            display: flex; flex-direction: column; gap: 10px; align-items: center; width: 100%;
-        }
+
+        .direct-input-container {display: flex; flex-direction: column; gap: 10px; align-items: center; width: 100%;}
         .direct-title { font-size: 0.9rem; color: var(--text-muted); }
-        .btn-input-group {
-            display: flex; gap: 12px; width: 100%; justify-content: center; max-width: 580px;
-        }
-        .btn-record {
-            flex: 1; padding: 14px; font-size: 1.1rem; font-weight: bold;
-            border: none; border-radius: 8px; cursor: pointer; color: white;
-            transition: transform 0.1s, opacity 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
+        .btn-input-group {display: flex; gap: 12px; width: 100%; justify-content: center; max-width: 580px;}
+        .btn-record {flex: 1; padding: 14px; font-size: 1.1rem; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; color: white; transition: transform 0.1s; box-shadow: 0 4px 6px rgba(0,0,0,0.3);}
         .btn-record:active { transform: scale(0.95); }
         .btn-banker { background-color: var(--banker-color); }
         .btn-player { background-color: var(--player-color); }
         .btn-tie { background-color: var(--tie-color); }
         .btn-group { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
-        .btn {
-            padding: 8px 16px; font-size: 0.85rem; font-weight: bold;
-            border: none; border-radius: 6px; cursor: pointer; color: white;
-        }
+        .btn {padding: 8px 16px; font-size: 0.85rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; color: white;}
         .btn-clear-stage { background-color: #475569; }
         .btn-utility { background-color: #334155; }
-        .batch-input-group {
-            display: flex; gap: 8px; justify-content: center; align-items: center;
-            flex-wrap: wrap; margin-top: 4px;
-        }
-        .batch-input-group input {
-            background-color: rgba(0, 0, 0, 0.3); border: 1px solid var(--border-color);
-            color: var(--text-color); padding: 8px 12px; border-radius: 6px;
-            flex: 1; max-width: 520px; font-size: 0.9rem;
-        }
-        .batch-input-group input:focus { outline: none; border-color: var(--accent-gold); }
+        
+        .batch-input-group {display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 4px;}
+        .batch-input-group input {background-color: rgba(0, 0, 0, 0.3); border: 1px solid var(--border-color); color: var(--text-color); padding: 8px 12px; border-radius: 6px; flex: 1; max-width: 520px;}
+        
         .dashboard { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; margin-bottom: 20px; }
         @media (max-width: 820px) { .dashboard { grid-template-columns: 1fr; } }
         
-        .final-card {
-            background-color: var(--card-bg); border: 2px solid var(--accent-gold);
-            border-radius: 12px; padding: 20px; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; text-align: center; position: relative;
-        }
+        .final-card {background-color: var(--card-bg); border: 2px solid var(--accent-gold); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative;}
         .final-title { font-size: 1rem; color: var(--text-muted); margin-bottom: 8px; font-weight: bold; }
         .final-target { font-size: 1.8rem; font-weight: 800; margin-bottom: 6px; }
-        .target-B { color: var(--banker-color); }
-        .target-P { color: var(--player-color); }
-        .target-N { color: var(--text-muted); }
+        .target-B { color: var(--banker-color); } .target-P { color: var(--player-color); } .target-N { color: var(--text-muted); }
         .confidence-box { font-size: 1.25rem; color: var(--accent-gold); font-weight: bold; margin-bottom: 10px; }
         .final-reason { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; }
         
-        .resonance-badge {
-            position: absolute; top: 10px; right: 10px; font-size: 0.75rem; font-weight: bold;
-            background: rgba(249, 115, 22, 0.2); color: var(--resonance-color); border: 1px solid var(--resonance-color);
-            padding: 4px 8px; border-radius: 6px; display: none; animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse { 
-            0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); } 
-            70% { box-shadow: 0 0 0 6px rgba(249, 115, 22, 0); } 
-            100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); } 
-        }
+        .resonance-badge {position: absolute; top: 10px; right: 10px; font-size: 0.75rem; font-weight: bold; background: rgba(249, 115, 22, 0.2); color: var(--resonance-color); border: 1px solid var(--resonance-color); padding: 4px 8px; border-radius: 6px; display: none; animation: pulse 1.5s infinite;}
+        @keyframes pulse {0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(249, 115, 22, 0); } 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }}
         
-        .bet-advice {
-            margin-top: 12px; padding: 8px 12px; background: rgba(16, 185, 129, 0.15);
-            border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 6px; font-size: 0.95rem;
-            color: var(--win-color); font-weight: bold; width: 100%; text-align: center;
-        }
+        .bet-advice {margin-top: 12px; padding: 8px 12px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 6px; font-size: 0.95rem; color: var(--win-color); font-weight: bold; width: 100%; text-align: center;}
         .bet-advice.wait { background: rgba(244, 63, 94, 0.15); border-color: rgba(244, 63, 94, 0.4); color: var(--loss-color); }
         
         .analysis-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
-        .analysis-card {
-            background-color: var(--card-bg); border: 1px solid var(--border-color);
-            border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 8px;
-        }
-        .card-header {
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid var(--border-color); padding-bottom: 6px;
-        }
+        .analysis-card {background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 8px;}
+        .card-header {display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;}
         .card-title { font-size: 0.9rem; font-weight: bold; color: var(--accent-gold); }
         .card-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-        .card-hitrate {
-            font-size: 0.75rem; color: var(--win-color); font-weight: bold;
-            background: rgba(16, 185, 129, 0.15); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.3);
-        }
         .card-conf { font-size: 0.75rem; font-weight: bold; background: rgba(245, 158, 11, 0.1); color: var(--accent-gold); padding: 2px 6px; border-radius: 4px; }
-        .card-conf-low { font-size: 0.75rem; font-weight: bold; background: rgba(244, 63, 94, 0.15); color: var(--loss-color); padding: 2px 6px; border-radius: 4px; }
         .card-weight { font-size: 0.75rem; font-weight: bold; background: var(--weight-bg); color: var(--weight-color); padding: 2px 6px; border-radius: 4px; }
         .card-target { font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }
-        .tag-B { background-color: rgba(239, 68, 68, 0.2); color: var(--banker-color); }
-        .tag-P { background-color: rgba(59, 130, 246, 0.2); color: var(--player-color); }
-        .tag-N { background-color: rgba(148, 163, 184, 0.2); color: var(--text-muted); }
+        .tag-B { background-color: rgba(239, 68, 68, 0.2); color: var(--banker-color); } .tag-P { background-color: rgba(59, 130, 246, 0.2); color: var(--player-color); } .tag-N { background-color: rgba(148, 163, 184, 0.2); color: var(--text-muted); }
         
-        .section-box {
-            background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color);
-            border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 4px;
-        }
-        .section-title { font-size: 0.78rem; color: var(--accent-gold); font-weight: bold; display: flex; align-items: center; gap: 4px; }
+        .section-box {background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 4px;}
+        .section-title { font-size: 0.78rem; color: var(--accent-gold); font-weight: bold;}
         .section-content { font-size: 0.8rem; color: var(--text-muted); line-height: 1.35; }
         
-        .stats-panel-bottom {
-            background-color: var(--card-bg); border: 1px solid var(--border-color);
-            border-radius: 12px; padding: 16px; margin-top: 12px;
-        }
-        .stats-panel-title { font-size: 0.95rem; color: var(--accent-gold); font-weight: bold; margin-bottom: 12px; text-align: center; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
-        .stat-card {
-            background-color: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color);
-            border-radius: 8px; padding: 12px; text-align: center; display: flex; flex-direction: column; gap: 4px;
-        }
-        .stat-label { font-size: 0.8rem; color: var(--text-muted); }
+        .stats-panel-bottom {background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin-top: 12px;}
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 12px;}
+        .stat-card {background-color: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; text-align: center; display: flex; flex-direction: column; gap: 4px;}
         .stat-value { font-size: 1.4rem; font-weight: bold; color: var(--text-color); }
-        .stat-value.win-rate { color: var(--accent-gold); }
-        .stat-value.win-count { color: var(--win-color); }
-        .stat-value.loss-count { color: var(--loss-color); }
+        .rg-banner { position: fixed; bottom: 0; left: 0; width: 100%; background-color: #0f172a; color: #cbd5e1; text-align: center; padding: 10px; font-size: 0.85rem; border-top: 1px solid #334155; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
 
 <header>
     <h1>百家樂多維路單分析與旗艦預測系統</h1>
-    <p>終極神級精算版 • 大龍物理極限過濾與全新動態和局機制</p>
+    <p>終極神級精算版 • 4大優化機制: 動態權重 / 嚴格空倉 / 破路自否決 / 和局絕對否決</p>
 </header>
 
 <div class="panel-container">
     <div class="history-container">
         <div class="history-title">
             <span>線上百家樂標準路單面板 (珠盤路與大路)</span>
-            <span id="beadCountInfo" style="color:var(--accent-gold); font-weight:bold;">總局數: 0 (有效局數: 0/10)</span>
+            <span id="beadCountInfo" style="color:var(--accent-gold); font-weight:bold;">總局數: 0/100 (有效: 0/10)</span>
         </div>
+        
         <div class="hud-stats-bar">
             <span>莊 (B): <strong id="countB" class="hud-b">0</strong></span>
             <span>閒 (P): <strong id="countP" class="hud-p">0</strong></span>
             <span>和 (T): <strong id="countT" class="hud-t">0</strong></span>
         </div>
+        
         <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:-2px;">珠盤路紀錄 (包含預測賽果驗證)</div>
         <div id="historyList" class="history-list"></div>
 
@@ -383,22 +185,20 @@
 
 <div class="panel-container">
     <div class="direct-input-container">
-        <span class="direct-title">點擊下方按鈕直接記錄當局開牌結果</span>
+        <span class="direct-title">點擊下方按鈕直接記錄當局開牌結果 (單靴上限 100 局)</span>
         <div class="btn-input-group">
             <button class="btn-record btn-player" onclick="recordResult('P')">閒 (P)</button>
             <button class="btn-record btn-tie" onclick="recordResult('T')">和 (T)</button>
             <button class="btn-record btn-banker" onclick="recordResult('B')">莊 (B)</button>
         </div>
     </div>
-    
     <div class="btn-group">
         <button class="btn btn-clear-stage" onclick="undoRecord()">復原上一局</button>
         <button class="btn btn-clear-stage" onclick="clearRecords()">重置全盤牌局</button>
     </div>
-
     <div class="batch-input-group">
-        <input type="text" id="batchInput" placeholder="批量賽果輸入（例：B,P,B,B,P,T 或 莊,閒,莊,和）" onkeypress="handleKeyPress(event)">
-        <button class="btn btn-utility" onclick="loadBatchInput()">載入批量賽果</button>
+        <input type="text" id="batchInput" placeholder="批量賽果（例：B,P,B,T）" onkeypress="handleKeyPress(event)">
+        <button class="btn btn-utility" onclick="loadBatchInput()">載入</button>
     </div>
 </div>
 
@@ -408,610 +208,367 @@
         <div class="final-title">最終預測建議 (神級動態引擎)</div>
         <div id="finalTarget" class="final-target target-N">觀望 (累積數據中)</div>
         <div id="finalPct" class="confidence-box">綜合可信度 --%</div>
-        <div id="finalReason" class="final-reason">需要至少 10 局有效數據（不含和局）才能啟動模組預測。</div>
+        <div id="finalReason" class="final-reason">需要至少 10 局有效數據才能啟動預測。</div>
         <div id="finalBetting"></div>
     </div>
-
     <div class="analysis-grid" id="analysisGrid"></div>
 </div>
 
 <div class="stats-panel-bottom">
-    <div class="stats-panel-title">實戰預測戰績與統計 (依據上一局的預測比對新賽果)</div>
+    <div style="text-align:center; font-weight:bold; color:var(--accent-gold);">實戰預測戰績與統計</div>
     <div class="stats-grid">
-        <div class="stat-card">
-            <span class="stat-label">預測勝率 (%)</span>
-            <span id="statWinRate" class="stat-value win-rate">0.0%</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-label">總下注局數</span>
-            <span id="statTotalBets" class="stat-value">0</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-label">預測成功 (贏)</span>
-            <span id="statWinCount" class="stat-value win-count">0</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-label">預測失敗 (輸)</span>
-            <span id="statLossCount" class="stat-value loss-count">0</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-label">觀望局數 (防禦)</span>
-            <span id="statSkipCount" class="stat-value">0</span>
-        </div>
+        <div class="stat-card"><span class="stat-label">預測勝率 (%)</span><span id="statWinRate" class="stat-value win-rate">0.0%</span></div>
+        <div class="stat-card"><span class="stat-label">總下注局數</span><span id="statTotalBets" class="stat-value">0</span></div>
+        <div class="stat-card"><span class="stat-label">預測成功</span><span id="statWinCount" class="stat-value" style="color:var(--win-color)">0</span></div>
+        <div class="stat-card"><span class="stat-label">預測失敗</span><span id="statLossCount" class="stat-value" style="color:var(--loss-color)">0</span></div>
+        <div class="stat-card"><span class="stat-label">觀望防禦</span><span id="statSkipCount" class="stat-value">0</span></div>
     </div>
+</div>
+
+<div class="rg-banner">
+    🔞 負責任博彩提示：本系統僅作為數學機率與走勢分析之單機工具，未連接任何資料庫，不提供真實金錢交易。
 </div>
 
 <script>
     let baccaratHistory = [];
+    const MAX_HANDS = 100;
 
-    function recordResult(result) { baccaratHistory.push(result); updateUI(); }
+    function recordResult(result) {
+        if (baccaratHistory.length >= MAX_HANDS) return alert(`已達 ${MAX_HANDS} 局上限！`);
+        baccaratHistory.push(result);
+        updateUI();
+    }
     function undoRecord() { baccaratHistory.pop(); updateUI(); }
     function clearRecords() { baccaratHistory = []; document.getElementById("batchInput").value = ""; updateUI(); }
     function handleKeyPress(e) { if (e.key === 'Enter') loadBatchInput(); }
-    
     function loadBatchInput() {
         let inputStr = document.getElementById("batchInput").value.trim();
         if (!inputStr) return;
         let cleanStr = inputStr.toUpperCase().replace(/莊/g, 'B').replace(/閒/g, 'P').replace(/和/g, 'T');
         let tokens = cleanStr.split(/,|\s|;|\|/);
         let parsed = [];
-        tokens.forEach(token => {
-            let t = token.trim();
-            if (t === 'B' || t === 'P' || t === 'T') parsed.push(t);
-            else for (let char of t) if (char === 'B' || char === 'P' || char === 'T') parsed.push(char);
+        tokens.forEach(t => { 
+            t = t.trim(); 
+            if (['B','P','T'].includes(t)) parsed.push(t); 
+            else for (let c of t) if (['B','P','T'].includes(c)) parsed.push(c); 
         });
-        if (parsed.length > 0) { baccaratHistory = parsed; updateUI(); } 
-        else { alert("無法解析批量賽果格式，請輸入如：B,P,B,B,P,T 或 莊,閒,莊,和"); }
+        if (parsed.length + baccaratHistory.length > MAX_HANDS) return alert(`匯入將超過 ${MAX_HANDS} 局上限！`);
+        baccaratHistory = baccaratHistory.concat(parsed);
+        document.getElementById("batchInput").value = "";
+        updateUI();
     }
 
+    // 抽象列與網格生成 (包含和局斜線)
     function buildRoadCols(sequence) {
         if (!sequence || sequence.length === 0) return [];
-        let cols = []; let currentCol = []; let currentColor = sequence[0];
-        for (let i = 0; i < sequence.length; i++) {
-            if (sequence[i] === currentColor) { currentCol.push(sequence[i]); } 
-            else { cols.push(currentCol); currentCol = [sequence[i]]; currentColor = sequence[i]; }
+        let cols = [], cur = [sequence[0]], color = sequence[0];
+        for (let i = 1; i < sequence.length; i++) {
+            if (sequence[i] === color) cur.push(sequence[i]);
+            else { cols.push(cur); cur = [sequence[i]]; color = sequence[i]; }
         }
-        if (currentCol.length > 0) cols.push(currentCol);
+        if (cur.length > 0) cols.push(cur);
         return cols;
     }
-    function buildRoadMatrix(historyArray) { return buildRoadCols(historyArray); }
-
+    
     function getRoadColor(matrix, col, row, offset) {
         if (row > 0) {
-            let targetCol = col - offset;
-            if (targetCol < 0) return null;
-            let targetLen = matrix[targetCol] ? matrix[targetCol].length : 0;
-            if (row < targetLen) return 'RED';
-            if (row === targetLen) return 'BLUE';
-            return 'RED';
+            let tCol = col - offset; if (tCol < 0) return null;
+            let tLen = matrix[tCol] ? matrix[tCol].length : 0;
+            return row < tLen ? 'RED' : (row === tLen ? 'BLUE' : 'RED');
         } else {
-            let targetCol1 = col - 1; let targetCol2 = col - 1 - offset;
-            if (targetCol2 < 0) return null;
-            let len1 = matrix[targetCol1] ? matrix[targetCol1].length : 0;
-            let len2 = matrix[targetCol2] ? matrix[targetCol2].length : 0;
+            let tCol1 = col - 1, tCol2 = col - 1 - offset;
+            if (tCol2 < 0) return null;
+            let len1 = matrix[tCol1] ? matrix[tCol1].length : 0;
+            let len2 = matrix[tCol2] ? matrix[tCol2].length : 0;
             return len1 === len2 ? 'RED' : 'BLUE';
         }
     }
-
+    
     function getDownThreeRoadSequence(pureHistory, offset) {
-        let colorSequence = []; let mat = buildRoadMatrix(pureHistory);
+        let seq = [], mat = buildRoadCols(pureHistory);
         if (mat.length === 0) return [];
         for (let col = 0; col < mat.length; col++) {
             for (let row = 0; row < mat[col].length; row++) {
                 let color = getRoadColor(mat, col, row, offset);
-                if (color) colorSequence.push(color);
+                if (color) seq.push(color);
             }
         }
-        return colorSequence;
+        return seq;
     }
 
-    // 動態牌靴脾氣檢測器 (Shoe-Adaptive AI)
-    function evaluateShoeCharacter(pureHistory) {
-        let trend = 0, jump = 0;
-        let recent = pureHistory.slice(-20); 
-        if (recent.length >= 6) {
-            for (let i = 1; i < recent.length; i++) {
-                if (recent[i] === recent[i-1]) trend++;
-                else jump++;
-            }
+    // 優化 1 & 2：全域震盪指數評估
+    function evaluateVolatility(pureHistory) {
+        if (pureHistory.length < 10) return { chops: 0, isChoppy: false };
+        let recent15 = pureHistory.slice(-15);
+        let directionChanges = 0;
+        for (let i = 1; i < recent15.length; i++) {
+            if (recent15[i] !== recent15[i-1]) directionChanges++;
         }
-        let total = trend + jump;
-        return {
-            isTrendFavorable: (total >= 10 && trend / total > 0.65), 
-            isJumpFavorable: (total >= 10 && jump / total > 0.65),   
-            ratioStr: `(連:${trend}/跳:${jump})`
+        // 如果 15 局內換向率超過 60% (約 9 次換向)，判定為絞殺盤
+        return { 
+            chops: directionChanges, 
+            isChoppy: (directionChanges / (recent15.length - 1)) >= 0.6 
         };
     }
 
-    // ==========================================
-    // 全新：動態和局機制 (Dynamic Tie Mechanism)
-    // ==========================================
+    // 優化 4：和局絕對否決機制
     function getTieMechanismPrediction(history) {
         let lastTieIdx = history.lastIndexOf('T');
         if (lastTieIdx === -1) return { active: false };
-
-        // 檢查和局密集度 (Chaos Phase)
         let recent10 = history.slice(-Math.min(history.length, 10));
         let tieCount = recent10.filter(x => x === 'T').length;
+        
+        // 【機制更新】：和局密集，直接發送 vetoAll 強制全系統空倉
         if (tieCount >= 2) {
-            return { 
-                active: true, target: 'NEUTRAL', confidence: 50, 
-                reason: `【全新機制：和局密集警示】近 10 局內出現 ${tieCount} 次和局，牌靴進入「洗牌不均」的混沌期，動能遭破壞，強烈建議觀望。`, 
-                weight: 1.5 // 賦予高權重以壓制其他訊號
-            };
+            return { active: true, target: 'NEUTRAL', vetoAll: true, confidence: 50, reason: `【全新機制：和局絕對否決】近 10 局內出現 ${tieCount} 次和局，物理慣性徹底斷裂，系統強制切斷所有預測！`, weight: 2.0 };
         }
-
-        // 檢查是否剛出和局 (或連續和局的末端)
-        let isRightAfterTie = (history[history.length - 1] === 'T');
-        if (isRightAfterTie) {
-            let preTieColor = null;
-            let streakBeforeTie = 0;
-            // 往前找最後一個非和局的顏色與它的連續長度
+        
+        if (history[history.length - 1] === 'T') {
+            let preTie = null, streak = 0;
             for (let i = history.length - 2; i >= 0; i--) {
                 if (history[i] !== 'T') {
-                    if (preTieColor === null) {
-                        preTieColor = history[i];
-                        streakBeforeTie = 1;
-                    } else if (history[i] === preTieColor) {
-                        streakBeforeTie++;
-                    } else {
-                        break;
-                    }
+                    if (preTie === null) { preTie = history[i]; streak = 1; }
+                    else if (history[i] === preTie) streak++;
+                    else break;
                 }
             }
-
-            if (!preTieColor) return { active: true, target: 'NEUTRAL', confidence: 50, reason: '【全新和局機制】數據不足，觀望。' };
-
-            // 機制 A：和局斷龍 (長連遭遇和局)
-            if (streakBeforeTie >= 3) {
-                let opposite = (preTieColor === 'B') ? 'P' : 'B';
-                return { 
-                    active: true, target: opposite, confidence: 88, 
-                    reason: `【全新機制：和局斷連】長連(${streakBeforeTie}局)後遭遇和局，強烈物理動能遭阻斷，極易變盤反轉，預測反打（${opposite === 'B' ? '莊' : '閒'}）。`,
-                    weight: 1.2
-                };
-            } 
-            // 機制 B：和局反彈 (震盪遭遇和局)
-            else {
-                return { 
-                    active: true, target: preTieColor, confidence: 82, 
-                    reason: `【全新機制：和局反彈】震盪盤勢遭遇和局，高機率複製和局前之結果，預測正打（${preTieColor === 'B' ? '莊' : '閒'}）。`,
-                    weight: 1.1
-                };
-            }
+            if (!preTie) return { active: false };
+            if (streak >= 3) return { active: true, target: preTie==='B'?'P':'B', vetoAll: false, confidence: 88, reason: `【和局斷連】長連後遇和局，極易反轉。`, weight: 1.2 };
+            else return { active: true, target: preTie, vetoAll: false, confidence: 82, reason: `【和局反彈】震盪遇和局，高機率複製。`, weight: 1.1 };
         }
-        return { active: false }; // 非和局影響圈
+        return { active: false };
     }
 
-    // ==========================================
-    // 7 大核心邏輯優化：修復覆蓋 Bug、新增極限臨界防護、單跳龍
-    // ==========================================
     function analyzePatternCore(sequence) {
-        let getItemName = (item) => item === 'RED' ? '紅點' : (item === 'BLUE' ? '藍點' : (item === 'B' ? '莊' : '閒'));
-        if (!sequence || sequence.length < 3) return { target: 'NEUTRAL', confidence: 50, reason: '歷史數據不足預測' };
-
-        let matrix = buildRoadMatrix(sequence); let numCols = matrix.length;
-        if (numCols === 0) return { target: 'NEUTRAL', confidence: 50, reason: '無有效數據' };
-
-        let colLens = matrix.map(col => col.length); let curLen = colLens[numCols - 1];
+        if (!sequence || sequence.length < 3) return { target: 'NEUTRAL', confidence: 50, reason: '數據不足' };
+        let matrix = buildRoadCols(sequence);
+        let numCols = matrix.length;
+        let colLens = matrix.map(c => c.length);
+        let curLen = colLens[numCols - 1];
         let lastItem = sequence[sequence.length - 1];
-        let oppositeItem = lastItem === 'B' ? 'P' : (lastItem === 'RED' ? 'BLUE' : (lastItem === 'P' ? 'B' : 'RED'));
-
-        let l1 = numCols >= 1 ? colLens[numCols - 1] : 0;
-        let l2 = numCols >= 2 ? colLens[numCols - 2] : 0;
-        let l3 = numCols >= 3 ? colLens[numCols - 3] : 0;
-
-        // 計算近期單跳長度 (Long Jump)
+        let oppItem = lastItem === 'B' ? 'P' : (lastItem === 'RED' ? 'BLUE' : (lastItem === 'P' ? 'B' : 'RED'));
+        
         let jumpCount = 0;
-        for(let i = numCols - 1; i >= 0; i--) {
-            if(colLens[i] === 1) jumpCount++; else break;
-        }
+        for(let i = numCols - 1; i >= 0; i--) { if(colLens[i] === 1) jumpCount++; else break; }
 
-        // 1. 大龍與極限物理慣性防護
-        if (curLen >= 8) return { target: 'NEUTRAL', confidence: 50, reason: `【邏輯3：大龍物理極限】連開 ${curLen} 局，物理慣性達衰竭臨界點。反轉風險極高，嚴禁盲目追龍或斬龍，系統強制觀望以保住利潤。`, isLogic3: true };
-        if (curLen >= 6) return { target: lastItem, confidence: 95, reason: `【邏輯3：大龍爆發】連開 ${curLen} 局，絕對單邊優勢，無條件順打 ${getItemName(lastItem)}`, isLogic3: true };
+        if (curLen >= 8) return { target: 'NEUTRAL', confidence: 50, reason: `大龍物理極限，強制觀望。` };
+        if (curLen >= 6) return { target: lastItem, confidence: 95, reason: `大龍爆發順打。` };
+        if (jumpCount >= 5) return { target: oppItem, confidence: 93, reason: `單跳龍反打。` };
+        if (curLen >= 3) return { target: lastItem, confidence: 85, reason: `中短龍延續。` };
         
-        // 2. 新增單跳龍邏輯
-        if (jumpCount >= 5) return { target: oppositeItem, confidence: 93, reason: `【新增邏輯：單跳龍】連續單跳達 ${jumpCount} 次，跳動慣性極強，順應反打 ${getItemName(oppositeItem)}` };
-
-        // 3. 中龍與小龍
-        if (curLen === 4 || curLen === 5) return { target: lastItem, confidence: 88, reason: `【邏輯3：中龍延續】連開${curLen}局，趨勢強烈確立，高機率延續，順打 ${getItemName(lastItem)}`, isLogic3: true };
-        if (curLen === 3) return { target: lastItem, confidence: 82, reason: `【邏輯3：小龍成形】連開3局，開始累積單邊延續動能，順打 ${getItemName(lastItem)}`, isLogic3: true };
-
-        // 4. 【修復 Bug】將嚴格的長形態 (邏輯6) 放在寬鬆的短形態 (邏輯5) 之前
-        if (numCols >= 3 && l3 === 3 && l2 === 3 && l1 === 2) return { target: lastItem, confidence: 90, reason: `【邏輯6：3-3-2 形態】預測補齊成 3-3-3，順打 ${getItemName(lastItem)}` };
-        if (numCols >= 2 && l2 === 3 && l1 === 2) return { target: lastItem, confidence: 84, reason: `【邏輯5：3-2 形態】預測補齊成 3-3，順打 ${getItemName(lastItem)}` };
-
-        // 5. 其餘常規邏輯
-        if (numCols >= 3 && l3 === 2 && l2 === 2 && l1 === 1) return { target: lastItem, confidence: 85, reason: `【邏輯1：雙跳 2-2-1】預測補齊成 2-2-2，順打 ${getItemName(lastItem)}` };
-        if ((numCols >= 3 && l3 === 1 && l2 === 2 && l1 === 1) || (numCols >= 3 && l3 === 2 && l2 === 1 && l1 === 2)) return { target: oppositeItem, confidence: 86, reason: `【邏輯2：1-2-1/2-1-2 形態】反打上一顆，預測開出 ${getItemName(oppositeItem)}` };
-        if (numCols >= 3 && l3 === 1 && l2 === 1 && l1 === 1) return { target: oppositeItem, confidence: 88, reason: `【邏輯4：短單跳 1-1-1】預測開出 ${getItemName(oppositeItem)}` };
-        if ((numCols >= 3 && l3 === 1 && l2 === 3 && l1 === 1) || (numCols >= 3 && l3 === 3 && l2 === 1 && l1 === 3)) return { target: oppositeItem, confidence: 87, reason: `【邏輯7：1-3-1/3-1-3 形態】反打上一顆，預測開出 ${getItemName(oppositeItem)}` };
+        let l1 = colLens[numCols - 1] || 0, l2 = colLens[numCols - 2] || 0, l3 = colLens[numCols - 3] || 0;
+        if (numCols >= 3 && l3===3 && l2===3 && l1===2) return { target: lastItem, confidence: 90, reason: `3-3-2 補齊。` };
+        if (numCols >= 2 && l2===3 && l1===2) return { target: lastItem, confidence: 84, reason: `3-2 補齊。` };
+        if (numCols >= 3 && l3===2 && l2===2 && l1===1) return { target: lastItem, confidence: 85, reason: `2-2-1 補齊。` };
+        if (numCols >= 3 && l3===1 && l2===1 && l1===1) return { target: oppItem, confidence: 88, reason: `短單跳 1-1-1反打。` };
         
-        return { target: 'NEUTRAL', confidence: 50, reason: '未符合 7 大指定邏輯，系統自動對下一局觀望' };
+        return { target: 'NEUTRAL', confidence: 50, reason: '未符 7 大邏輯，觀望' };
     }
 
-    // 頂尖 AI 防禦與自適應調整
-    function analyzeCoreWithMechanism(sequence, originalHistory = null) {
+    function analyzeCoreWithMechanism(sequence) {
         let base = analyzePatternCore(sequence);
-        let matrix = buildRoadMatrix(sequence);
-        let curLen = matrix.length > 0 ? matrix[matrix.length - 1].length : 0;
-        let lastItem = sequence[sequence.length - 1];
-        let oppositeItem = lastItem === 'B' ? 'P' : (lastItem === 'RED' ? 'BLUE' : (lastItem === 'P' ? 'B' : 'RED'));
-        let getItemName = (item) => item === 'RED' ? '紅' : (item === 'BLUE' ? '藍' : (item === 'B' ? '莊' : '閒'));
+        let vol = evaluateVolatility(sequence);
+        let adjustedConf = base.confidence;
+        let mechReason = "平穩區間。";
         
-        let mechanismReason = ""; let breakStrength = "低";
-        let finalTarget = base.target; let adjustedConfidence = base.confidence;
-
-        // 大龍臨界點豁免檢查 (不要再動態加權覆蓋它)
-        if (curLen >= 8 && finalTarget === 'NEUTRAL') {
-            return { target: 'NEUTRAL', baseConfidence: base.confidence, confidence: 50, logicReason: base.reason, mechanismReason: '【物理極限防護】強制空倉，迴避斷龍風險。', breakStrength: '極高 (強制停損)', isLogic3: true };
+        // 針對大路與下三路的自我修正
+        if (vol.isChoppy && base.target === sequence[sequence.length-1]) {
+            adjustedConf -= 20; 
+            mechReason = `⚠️【絞殺盤偵測】近期高頻換向，系統強力壓制順打信心！`;
+        } else if (vol.isChoppy && base.target !== sequence[sequence.length-1]) {
+            adjustedConf += 5;
+            mechReason = `【順應震盪】高頻跳動，微調增強反打信心。`;
         }
-
-        // 【動態牌靴自適應】
-        let shoeChar = evaluateShoeCharacter(sequence);
-        let isTrendLogic = (finalTarget === lastItem); 
-        if (finalTarget !== 'NEUTRAL') {
-            if (isTrendLogic && shoeChar.isTrendFavorable) {
-                adjustedConfidence += 8; mechanismReason += `【AI自適應】這靴牌偏向連開 ${shoeChar.ratioStr}，順打成功率激增！ `; breakStrength = "極低 (自適應共振)";
-            } else if (!isTrendLogic && shoeChar.isJumpFavorable) {
-                adjustedConfidence += 8; mechanismReason += `【AI自適應】這靴牌頻繁震盪跳動 ${shoeChar.ratioStr}，反打成功率激增！ `; breakStrength = "極低 (自適應共振)";
-            } else if (isTrendLogic && shoeChar.isJumpFavorable) {
-                adjustedConfidence -= 15; mechanismReason += `⚠️【AI自適應】這靴牌頻繁跳動 ${shoeChar.ratioStr}，逆勢順打極其危險，強制壓制信心！ `; breakStrength = "高 (自適應壓制)";
-            }
+        
+        if (adjustedConf < 75 && base.target !== 'NEUTRAL') {
+            return { target: 'NEUTRAL', confidence: 50, logicReason: base.reason, mechanismReason: mechReason + " ➔ 信心跌破閾值，自我否決。", breakStrength: '高' };
         }
-
-        // 雙層震盪與和局干擾
-        let shortVol = 0;
-        if (sequence.length >= 4) {
-            let recent = sequence.slice(-Math.min(sequence.length, 5));
-            for (let i = 1; i < recent.length; i++) if (recent[i] !== recent[i-1]) shortVol++;
-        }
-
-        // 核心防禦判定
-        if (curLen >= 4 && curLen < 8 && finalTarget === oppositeItem) {
-            finalTarget = 'NEUTRAL'; adjustedConfidence = 50; breakStrength = "極高 (AI 強制避險)";
-            mechanismReason = `【防斷龍鐵律】連開 ${curLen} 局形成龍勢，嚴禁逆勢反打！本局強制觀望以確保勝率。`;
-        } else if (shortVol >= 3 && finalTarget === lastItem) {
-            finalTarget = oppositeItem; adjustedConfidence = Math.min(95, base.confidence + 10); breakStrength = "高 (順應震盪)";
-            mechanismReason = `【雙層震盪偵測】短期盤勢處於高頻震盪，AI 否決順打，順應跳動趨勢強制改為【反打 ${getItemName(oppositeItem)}】。`;
-        }
-
-        // 終極信號濾網 (低於75即過濾)
-        if (adjustedConfidence < 75 && finalTarget !== 'NEUTRAL') {
-            mechanismReason += ` ➔ 警示：信號強度跌破 75% 防禦門檻，AI 判定為高風險，強行削弱至觀望。`;
-            finalTarget = 'NEUTRAL';
-        }
-
-        return {
-            target: finalTarget, baseConfidence: base.confidence, confidence: adjustedConfidence,
-            logicReason: base.reason, mechanismReason: mechanismReason || "【動態偵測】盤勢穩定，常規波動區間。", breakStrength: breakStrength, isLogic3: base.isLogic3
-        };
+        return { target: base.target, confidence: adjustedConf, logicReason: base.reason, mechanismReason: mechReason, breakStrength: '中' };
     }
 
-    function analyzeBigRoadWithMechanism(pureHistory, originalHistory) {
-        let res = analyzeCoreWithMechanism(pureHistory, originalHistory);
-        return { name: '大路形態 (核心 1)', target: res.target, confidence: res.confidence, logicReason: res.logicReason, mechanismReason: res.mechanismReason, breakStrength: res.breakStrength };
-    }
-
-    function analyzeDownThreeRoadsWithMechanism(pureHistory, offset, roadName, originalHistory) {
-        let colorSequence = getDownThreeRoadSequence(pureHistory, offset);
-        if (colorSequence.length === 0) {
-            return { name: roadName, target: 'NEUTRAL', confidence: 50, logicReason: '走勢轉向次數不足，尚未形成此路。', mechanismReason: '【破路機制】無有效數據流，機制處於待命狀態。', breakStrength: '低 (無)' };
-        }
-
-        let mechRes = analyzeCoreWithMechanism(colorSequence, originalHistory);
-        if (mechRes.target === 'NEUTRAL') {
-            return { name: roadName, target: 'NEUTRAL', confidence: 50, logicReason: mechRes.logicReason, mechanismReason: mechRes.mechanismReason, breakStrength: mechRes.breakStrength };
-        }
-
-        let targetColor = mechRes.target; let colorName = targetColor === 'RED' ? '紅' : '藍';
-        let colorB = getDownThreeRoadSequence(pureHistory.concat(['B']), offset).pop();
-        let colorP = getDownThreeRoadSequence(pureHistory.concat(['P']), offset).pop();
-
-        let ownTarget = 'NEUTRAL', mappedReason = "";
-        // 對稱盲區的深度推演與莊家優勢補償
-        if (colorB === targetColor && colorP !== targetColor) {
-            ownTarget = 'B'; mappedReason = `指標結果為【${colorName}】 ➔ 唯有【莊】滿足此條件。`;
-        } else if (colorP === targetColor && colorB !== targetColor) {
-            ownTarget = 'P'; mappedReason = `指標結果為【${colorName}】 ➔ 唯有【閒】滿足此條件。`;
-        } else if (colorB === targetColor && colorP === targetColor) {
-            ownTarget = 'B'; mappedReason = `指標結果為【${colorName}】 ➔ ⚠️【雙向對稱衝突】，AI啟動【深度推演與莊家優勢補償】，強行導向【莊】。`;
-            mechRes.confidence = Math.max(75, mechRes.confidence - 5);
-        } else {
-            return { name: roadName, target: 'NEUTRAL', confidence: 50, logicReason: `預測開【${colorName}】，但莊閒雙向背離，失去方向性。`, mechanismReason: mechRes.mechanismReason, breakStrength: mechRes.breakStrength };
-        }
-
-        return { name: roadName, target: ownTarget, confidence: mechRes.confidence, logicReason: mechRes.logicReason + '<br>' + mappedReason, mechanismReason: mechRes.mechanismReason, breakStrength: mechRes.breakStrength };
-    }
-
-    function getTieMechanismAnalysis(history) {
-        let tieRes = getTieMechanismPrediction(history);
-        if (!tieRes.active) {
-            return { name: '和局動態分析 (核心 5)', target: 'NEUTRAL', confidence: 50, logicReason: '未處於和局影響圈，不干預本局。', mechanismReason: '【全新和局機制】待命。', breakStrength: '低 (無)', weight: 1.0 };
-        }
-        return { name: '和局動態分析 (核心 5)', target: tieRes.target, confidence: tieRes.confidence, logicReason: tieRes.reason, mechanismReason: '【全新和局機制】觸發動態破壞推演，參與加權。', breakStrength: '中 (強勢介入)', weight: tieRes.weight || 1.1 };
-    }
-
+    // 優化 1 & 3：動態權重與下三路自我否決
     function getAllCoresAnalysis(history) {
-        let pureHistory = history.filter(x => x !== 'T');
-        if (pureHistory.length < 10) {
-            let reasonStr = `有效牌局未達 10 局門檻 (當前 ${pureHistory.length}/10)，對下一局保持觀望`;
-            let baseEmpty = Array(4).fill(null).map((_, idx) => ({
-                name: ['大路形態 (核心 1)', '下三路 (大眼仔 核心 2)', '下三路 (小路 核心 3)', '下三路 (曱甴路 核心 4)'][idx],
-                target: 'NEUTRAL', confidence: 50, logicReason: reasonStr, mechanismReason: '【防禦機制】等待累積有效數據。', breakStrength: '低', weight: 1.0
-            }));
-            baseEmpty.push({ name: '和局動態分析 (核心 5)', target: 'NEUTRAL', confidence: 50, logicReason: reasonStr, mechanismReason: '【全新和局機制】等待有效局數。', breakStrength: '低', weight: 1.0 });
-            return baseEmpty;
-        }
-
-        let bigRoadRes = analyzeBigRoadWithMechanism(pureHistory, history); bigRoadRes.weight = 1.2;
-        let res1 = analyzeDownThreeRoadsWithMechanism(pureHistory, 1, '下三路 (大眼仔 核心 2)', history); res1.weight = 1.1;
-        let res2 = analyzeDownThreeRoadsWithMechanism(pureHistory, 2, '下三路 (小路 核心 3)', history); res2.weight = 1.0;
-        let res3 = analyzeDownThreeRoadsWithMechanism(pureHistory, 3, '下三路 (曱甴路 核心 4)', history); res3.weight = 0.9;
+        let pure = history.filter(x => x !== 'T');
+        if (pure.length < 10) return Array(5).fill({ target: 'NEUTRAL', confidence: 50, logicReason: '數據不足', mechanismReason: '待命', weight: 1.0 });
         
-        let tieRes = getTieMechanismAnalysis(history); // 動態獲取和局機制的分析與權重
-
-        return [bigRoadRes, res1, res2, res3, tieRes];
-    }
-
-    // 整合階級加權、三路共振、莊家優勢與牌靴生命週期
-    function getFinalPredictionDetails(history) {
-        let pureHistory = history.filter(x => x !== 'T');
-        if (pureHistory.length < 10) return { target: 'NEUTRAL', reasonCode: 'WAIT_DATA' };
-
-        let cores = getAllCoresAnalysis(history);
-        let bScore = 0, pScore = 0, validCores = 0;
-        let bWeightTotal = 0, pWeightTotal = 0;
-
-        cores.forEach(res => {
-            if (res.target !== 'NEUTRAL' && res.confidence >= 75) {
-                validCores++;
-                let wScore = res.confidence * res.weight;
-                if (res.target === 'B') { bScore += wScore; bWeightTotal += res.weight; }
-                else if (res.target === 'P') { pScore += wScore; pWeightTotal += res.weight; }
-            }
-        });
-
-        // 三路共振必殺技 (Resonance Detector)
-        let hasResonance = false; let resonanceTarget = null;
-        let lowerRoadTargets = [cores[1].target, cores[2].target, cores[3].target]; 
-        if (lowerRoadTargets.every(t => t === 'B')) {
-            hasResonance = true; resonanceTarget = 'B'; bScore += 80; validCores++;
-        } else if (lowerRoadTargets.every(t => t === 'P')) {
-            hasResonance = true; resonanceTarget = 'P'; pScore += 80; validCores++;
-        }
-
-        // 莊家天生優勢補償 
-        bScore *= 1.03; 
-
-        if (validCores < 2) return { target: 'NEUTRAL', reasonCode: 'INSUFFICIENT_CORES', validCores };
-
-        let isEndShoe = history.length > 55;
-        let defenseThreshold = isEndShoe ? 45 : 35; 
-        let diff = Math.abs(bScore - pScore);
+        let vol = evaluateVolatility(pure);
         
-        // 莊家優勢極限救援
-        if (diff <= defenseThreshold && bScore > 0 && pScore > 0) {
-            if (pScore > bScore && (pScore - bScore) < 12) {
-                bScore += 15; diff = Math.abs(bScore - pScore);
-            }
-            if (diff <= defenseThreshold) {
-                return { target: 'NEUTRAL', reasonCode: 'DEFENSE', bScore, pScore, defenseThreshold, isEndShoe, hasResonance };
-            }
-        }
+        // 核心 1: 大路
+        let br = analyzeCoreWithMechanism(pure);
+        br.name = '大路形態'; br.weight = vol.isChoppy ? 0.8 : 1.2; // 震盪盤削弱大路權重
 
-        let winningTarget = bScore > pScore ? 'B' : 'P';
-        let winScore = winningTarget === 'B' ? bScore : pScore;
-        let winWeight = winningTarget === 'B' ? bWeightTotal : pWeightTotal;
-        if (hasResonance) winWeight += 1.0; 
-
-        let avgWinConf = winScore / winWeight;
-        let coreRatio = winWeight / (bWeightTotal + pWeightTotal + (hasResonance?1:0)); 
-        let finalConfidence = (avgWinConf * 0.6 + coreRatio * 40).toFixed(1);
-        
-        if (hasResonance && winningTarget === resonanceTarget) finalConfidence = Math.max(92, finalConfidence);
-
-        return {
-            target: winningTarget, confidence: parseFloat(finalConfidence),
-            bScore, pScore, validCores, isEndShoe, hasResonance, resonanceTarget
-        };
-    }
-
-    function calculateAllStats() {
-        let coreStats = Array(5).fill(null).map(() => ({ win: 0, loss: 0, total: 0 }));
-        let overallTotalBets = 0, overallWinCount = 0, overallLossCount = 0, overallSkipCount = 0;
-
-        for (let i = 1; i < baccaratHistory.length; i++) {
-            let actualResult = baccaratHistory[i];
-            if (actualResult === 'T') continue; 
-            let pastHistory = baccaratHistory.slice(0, i);
-            let purePastHistory = pastHistory.filter(x => x !== 'T');
-            if (purePastHistory.length < 10) continue;
-
-            let cores = getAllCoresAnalysis(pastHistory);
-            cores.forEach((res, idx) => {
-                if (res.target !== 'NEUTRAL' && res.confidence >= 75) {
-                    coreStats[idx].total++;
-                    if (res.target === actualResult) coreStats[idx].win++; else coreStats[idx].loss++;
-                }
-            });
-
-            let finalPredObj = getFinalPredictionDetails(pastHistory);
-            let finalPred = finalPredObj ? finalPredObj.target : 'NEUTRAL';
+        // 下三路處理與自我否決
+        function getLowerRoad(offset, name, defaultWeight) {
+            let seq = getDownThreeRoadSequence(pure, offset);
+            if(seq.length < 3) return { name, target: 'NEUTRAL', confidence: 50, logicReason: '未成形', mechanismReason: '待命', weight: defaultWeight };
+            let res = analyzeCoreWithMechanism(seq);
             
-            if (finalPred === 'NEUTRAL') { overallSkipCount++; } 
-            else {
-                overallTotalBets++;
-                if (finalPred === actualResult) overallWinCount++; else overallLossCount++;
+            // 【優化3：下三路自我否決】若下三路信心平庸且處於震盪盤，直接捨棄不參與加權
+            if (res.target !== 'NEUTRAL' && res.confidence < 82 && vol.isChoppy) {
+                return { name, target: 'NEUTRAL', confidence: 50, logicReason: res.logicReason, mechanismReason: `【自我否決】爛路期間該路訊號薄弱，為保勝率強制退出運算。`, weight: 0 };
             }
+            
+            let colorB = getDownThreeRoadSequence(pure.concat(['B']), offset).pop();
+            let colorP = getDownThreeRoadSequence(pure.concat(['P']), offset).pop();
+            let actualTarget = 'NEUTRAL';
+            if (colorB === res.target && colorP !== res.target) actualTarget = 'B';
+            else if (colorP === res.target && colorB !== res.target) actualTarget = 'P';
+            else if (colorB === res.target && colorP === res.target) { actualTarget = 'B'; res.confidence -= 5; } // 莊優勢補償
+            
+            return { name, target: actualTarget, confidence: res.confidence, logicReason: res.logicReason, mechanismReason: res.mechanismReason, weight: vol.isChoppy ? defaultWeight + 0.2 : defaultWeight }; // 震盪盤調高下三路權重
         }
-        let overallWinRate = overallTotalBets > 0 ? ((overallWinCount / overallTotalBets) * 100).toFixed(1) : "0.0";
-        let coreWinRates = coreStats.map(s => {
-            let rate = s.total > 0 ? ((s.win / s.total) * 100).toFixed(1) : "0.0";
-            return { rate, win: s.win, loss: s.loss, total: s.total };
-        });
-        return { overall: { totalBets: overallTotalBets, winCount: overallWinCount, lossCount: overallLossCount, skipCount: overallSkipCount, winRate: overallWinRate }, cores: coreWinRates };
+
+        let e1 = getLowerRoad(1, '大眼仔路', 1.1);
+        let e2 = getLowerRoad(2, '小路', 1.0);
+        let e3 = getLowerRoad(3, '曱甴路', 0.9);
+        
+        let tie = getTieMechanismPrediction(history);
+        tie.name = '和局動態機制';
+        if (!tie.active) tie = { name: tie.name, target: 'NEUTRAL', confidence: 50, logicReason: '無干擾', mechanismReason: '待命', weight: 1.0 };
+        
+        return [br, e1, e2, e3, tie];
     }
 
-    function simulateAskRoad(pureHistory, target) {
-        let simulated = pureHistory.concat([target]);
-        let bigRoadCol = null, bigEyeColor = null, smallColor = null, roachColor = null;
-        let mat = buildRoadMatrix(simulated);
-        if (mat.length > 0) { let lastCol = mat[mat.length - 1]; bigRoadCol = lastCol[lastCol.length - 1] === 'B' ? 'red' : 'blue'; }
-        let seqBigEye = getDownThreeRoadSequence(simulated, 1); if (seqBigEye.length > 0) bigEyeColor = seqBigEye[seqBigEye.length - 1];
-        let seqSmall = getDownThreeRoadSequence(simulated, 2); if (seqSmall.length > 0) smallColor = seqSmall[seqSmall.length - 1];
-        let seqRoach = getDownThreeRoadSequence(simulated, 3); if (seqRoach.length > 0) roachColor = seqRoach[seqRoach.length - 1];
-        return [bigRoadCol, bigEyeColor, smallColor, roachColor];
-    }
-
-    function renderRoadMatrix(containerId, colorSequence, isBigRoad = false) {
-        let container = document.getElementById(containerId); container.innerHTML = "";
-        let cols = buildRoadCols(colorSequence);
-        cols.forEach(colArr => {
-            let colDiv = document.createElement("div"); colDiv.className = "road-col";
-            colArr.forEach(item => {
-                let dot = document.createElement("span");
-                if (isBigRoad) dot.className = `mini-dot ${item === 'B' ? 'red' : 'blue'}`;
-                else dot.className = `mini-dot ${item === 'RED' ? 'red' : 'blue'}`;
-                colDiv.appendChild(dot);
-            });
-            container.appendChild(colDiv);
-        });
-        container.scrollLeft = container.scrollWidth;
-    }
-
-    function renderAskRoadDots(containerId, askColors) {
-        let container = document.getElementById(containerId);
-        let divs = container.querySelectorAll('.mini-dot');
-        for (let i = 0; i < 4; i++) {
-            if (askColors[i]) {
-                if (i === 0) divs[i].className = `mini-dot ${askColors[i]}`;
-                else divs[i].className = `mini-dot ${askColors[i] === 'RED' ? 'red' : 'blue'}`;
-            } else divs[i].className = "mini-dot empty";
+    function getFinalPredictionDetails(history) {
+        let pure = history.filter(x => x !== 'T');
+        if (pure.length < 10) return { target: 'NEUTRAL', reasonCode: 'WAIT' };
+        
+        let cores = getAllCoresAnalysis(history);
+        
+        // 【優化 4 實作】：和局絕對否決，阻斷所有常規運算
+        if (cores[4].vetoAll) {
+            return { target: 'NEUTRAL', reasonCode: 'TIE_VETO', reasonText: cores[4].reason };
         }
+
+        let bScore = 0, pScore = 0, valid = 0, bWeight = 0, pWeight = 0;
+        cores.forEach(c => {
+            if (c.target === 'B') { bScore += c.confidence * c.weight; bWeight += c.weight; valid++; }
+            if (c.target === 'P') { pScore += c.confidence * c.weight; pWeight += c.weight; valid++; }
+        });
+
+        // 三路共震判定
+        let lowers = [cores[1].target, cores[2].target, cores[3].target];
+        let hasResonance = false, resTarget = null;
+        if (lowers.every(t => t === 'B')) { hasResonance = true; resTarget = 'B'; bScore += 80; valid++; }
+        if (lowers.every(t => t === 'P')) { hasResonance = true; resTarget = 'P'; pScore += 80; valid++; }
+
+        bScore *= 1.03; // 莊優勢
+        
+        let vol = evaluateVolatility(pure);
+        // 【優化 2 實作】：四級震盪盤嚴格空倉
+        if (vol.isChoppy && !hasResonance) {
+            return { target: 'NEUTRAL', reasonCode: 'HIGH_VOLATILITY', bScore, pScore, volText: `【嚴格空倉】近15局出現 ${vol.chops} 次轉向。在無三路共振的絞殺盤中，系統強制防禦，保護本金。` };
+        }
+
+        if (valid < 2 || Math.abs(bScore - pScore) < 35) return { target: 'NEUTRAL', reasonCode: 'DEFENSE', bScore, pScore };
+        
+        let target = bScore > pScore ? 'B' : 'P';
+        let conf = ((bScore > pScore ? bScore : pScore) / (bScore > pScore ? bWeight : pWeight) * 0.6 + 40).toFixed(1);
+        if (hasResonance && target === resTarget) conf = Math.max(92, conf);
+        
+        return { target, confidence: conf, bScore, pScore, valid, hasResonance };
     }
 
     function updateUI() {
-        let historyContainer = document.getElementById("historyList"); historyContainer.innerHTML = "";
-        let countB = baccaratHistory.filter(x => x === 'B').length;
-        let countP = baccaratHistory.filter(x => x === 'P').length;
-        let countT = baccaratHistory.filter(x => x === 'T').length;
+        let hList = document.getElementById("historyList");
+        hList.innerHTML = "";
+        let countB = 0, countP = 0, countT = 0;
+        
+        baccaratHistory.forEach(x => { if(x==='B') countB++; if(x==='P') countP++; if(x==='T') countT++; });
         document.getElementById("countB").innerText = countB;
         document.getElementById("countP").innerText = countP;
         document.getElementById("countT").innerText = countT;
+        document.getElementById("beadCountInfo").innerText = `總局數: ${baccaratHistory.length}/${MAX_HANDS} (有效: ${countB+countP}/10)`;
 
-        baccaratHistory.forEach((res, index) => {
-            let badge = document.createElement("div"); badge.className = `badge-box badge-box-${res}`;
+        let totalBets = 0, winCount = 0, lossCount = 0, skipCount = 0;
+        baccaratHistory.forEach((res, i) => {
+            let badge = document.createElement("div");
+            badge.className = `badge-box badge-box-${res}`;
             badge.innerText = res === 'B' ? '莊' : (res === 'P' ? '閒' : '和');
-            if (index > 0) {
-                let pastHistory = baccaratHistory.slice(0, index);
-                let purePastHistory = pastHistory.filter(x => x !== 'T');
-                if (purePastHistory.length >= 10) {
-                    let predObj = getFinalPredictionDetails(pastHistory);
-                    let pred = predObj ? predObj.target : 'NEUTRAL';
-                    if (pred && pred !== 'NEUTRAL') {
-                        let icon = document.createElement("span"); icon.className = "pred-icon";
-                        if (res === 'T') icon.innerText = "➖"; else if (pred === res) icon.innerText = "✅"; else icon.innerText = "❌";
+            
+            if (i > 0 && res !== 'T') {
+                let past = baccaratHistory.slice(0, i);
+                if (past.filter(x=>x!=='T').length >= 10) {
+                    let pred = getFinalPredictionDetails(past).target;
+                    if (pred === 'NEUTRAL') skipCount++;
+                    else {
+                        totalBets++;
+                        let icon = document.createElement("span");
+                        icon.className = "pred-icon";
+                        if (pred === res) { icon.innerText = "✅"; winCount++; }
+                        else { icon.innerText = "❌"; lossCount++; }
                         badge.appendChild(icon);
                     }
                 }
             }
-            historyContainer.appendChild(badge);
-        });
-        historyContainer.scrollLeft = historyContainer.scrollWidth;
-
-        let pureHistory = baccaratHistory.filter(x => x !== 'T'); let pureCount = pureHistory.length;
-        document.getElementById("beadCountInfo").innerText = `總局數: ${baccaratHistory.length} (有效局數: ${pureCount}/10)`;
-
-        renderRoadMatrix("roadBigRoad", pureHistory, true);
-        renderRoadMatrix("roadBigEye", getDownThreeRoadSequence(pureHistory, 1));
-        renderRoadMatrix("roadSmall", getDownThreeRoadSequence(pureHistory, 2));
-        renderRoadMatrix("roadCockroach", getDownThreeRoadSequence(pureHistory, 3));
-        renderAskRoadDots("askBankerBox", simulateAskRoad(pureHistory, 'B'));
-        renderAskRoadDots("askPlayerBox", simulateAskRoad(pureHistory, 'P'));
-
-        let allStats = calculateAllStats(); let overallStats = allStats.overall;
-        document.getElementById("statWinRate").innerText = `${overallStats.winRate}%`;
-        document.getElementById("statTotalBets").innerText = overallStats.totalBets;
-        document.getElementById("statWinCount").innerText = overallStats.winCount;
-        document.getElementById("statLossCount").innerText = overallStats.lossCount;
-        document.getElementById("statSkipCount").innerText = overallStats.skipCount;
-
-        let analysisResults = getAllCoresAnalysis(baccaratHistory);
-        let gridContainer = document.getElementById("analysisGrid"); gridContainer.innerHTML = "";
-        let finalTargetElem = document.getElementById("finalTarget");
-        let finalPctElem = document.getElementById("finalPct");
-        let finalReasonElem = document.getElementById("finalReason");
-        let finalBettingElem = document.getElementById("finalBetting");
-        let resonanceBadge = document.getElementById("resonanceBadge");
-
-        analysisResults.forEach((res, idx) => {
-            let cStat = allStats.cores[idx];
-            let hitRateText = `勝率 ${cStat.rate}% (${cStat.win}勝/${cStat.loss}負)`;
-            let targetText = res.target === 'B' ? '莊 (B)' : (res.target === 'P' ? '閒 (P)' : '觀望');
-            let tagClass = res.target === 'B' ? 'tag-B' : (res.target === 'P' ? 'tag-P' : 'tag-N');
-            let confHtml = "";
-            if (res.target === 'NEUTRAL' || pureCount < 10) {
-                confHtml = `<span class="card-conf">可信度 --%</span>`; targetText = "觀望"; tagClass = "tag-N";
-            } else if (res.confidence >= 75) {
-                confHtml = `<span class="card-conf">可信度 ${res.confidence}%</span>`;
-            } else {
-                confHtml = `<span class="card-conf-low">可信度 ${res.confidence}% (壓制)</span>`; targetText = "觀望"; tagClass = "tag-N";
-            }
-            let weightHtml = `<span class="card-weight">權重 x${res.weight.toFixed(1)}</span>`;
-            let card = document.createElement("div"); card.className = "analysis-card";
-            card.innerHTML = `
-                <div class="card-header">
-                    <span class="card-title">${res.name}</span>
-                    <div class="card-meta"><span class="card-hitrate">${hitRateText}</span>${confHtml} ${weightHtml}<span class="card-target ${tagClass}">${targetText}</span></div>
-                </div>
-                <div class="section-box"><div class="section-title">📊 邏輯分析預測方向</div><div class="section-content">${res.logicReason}</div></div>
-                <div class="section-box"><div class="section-title">🛡️ 機制狀態 (${res.breakStrength})</div><div class="section-content">${res.mechanismReason}</div></div>
-            `;
-            gridContainer.appendChild(card);
-        });
-
-        let finalObj = getFinalPredictionDetails(baccaratHistory);
-        resonanceBadge.style.display = (finalObj.hasResonance && finalObj.target === finalObj.resonanceTarget) ? 'block' : 'none';
-
-        if (finalObj.reasonCode === 'WAIT_DATA') {
-            let needed = 10 - pureCount;
-            finalTargetElem.innerText = "觀望 (數據累積中)"; finalTargetElem.className = "final-target target-N";
-            finalPctElem.innerText = "綜合可信度 --%";
-            finalReasonElem.innerText = `當前有效局數僅 ${pureCount} 局，全系統加權預測需至少 10 局數據。還差 ${needed} 局。`;
-            finalBettingElem.innerHTML = "";
-        } else if (finalObj.reasonCode === 'INSUFFICIENT_CORES') {
-            finalTargetElem.innerText = "預測下一局：觀望 (核心不足)"; finalTargetElem.className = "final-target target-N";
-            finalPctElem.innerText = "綜合可信度 --%";
-            finalReasonElem.innerText = `【AI頂級防禦】：當前僅有 ${finalObj.validCores} 個核心觸發強烈有效訊號 (≥75%)。未達 2 個核心共振門檻，系統強制觀望。`;
-            finalBettingElem.innerHTML = `<div class="bet-advice wait">嚴格空倉 (防禦狀態，不下注)</div>`;
-        } else if (finalObj.reasonCode === 'DEFENSE') {
-            let bScore = finalObj.bScore, pScore = finalObj.pScore;
-            let bProb = ((bScore / (bScore + pScore)) * 100).toFixed(1);
-            let pProb = ((pScore / (bScore + pScore)) * 100).toFixed(1);
-            finalTargetElem.innerText = "預測下一局：觀望 (高風險警示)"; finalTargetElem.className = "final-target target-N";
-            finalPctElem.innerText = `機率估算：莊 ${bProb}% | 閒 ${pProb}%`;
-            let lcWarning = finalObj.isEndShoe ? "【尾局高危險期】" : "";
-            finalReasonElem.innerText = `【AI精算防禦】${lcWarning}莊家加權 (${bScore.toFixed(1)}) 與閒家加權 (${pScore.toFixed(1)}) 產生劇烈衝突。即便套用莊家優勢補償仍無法拉開安全差距 (≤${finalObj.defenseThreshold})。絕對觀望。`;
-            finalBettingElem.innerHTML = `<div class="bet-advice wait">嚴格空倉 (局勢混沌，不下注)</div>`;
-        } else {
-            let { target, confidence, bScore, pScore, validCores, isEndShoe, hasResonance } = finalObj;
-            if (target === 'B') { finalTargetElem.innerText = "預測下一局：莊 (B)"; finalTargetElem.className = "final-target target-B"; } 
-            else { finalTargetElem.innerText = "預測下一局：閒 (P)"; finalTargetElem.className = "final-target target-P"; }
-            finalPctElem.innerText = `綜合可信度 ${confidence}%`;
-
-            let lcWarning = isEndShoe ? "⚠️【牌靴尾局】已啟動高防禦閾值。 " : "";
-            let resText = hasResonance ? "🔥【三路共振爆發】：下三路完美指向同一結果，獲得極大信心加乘！" : "";
-            let edgeText = "【AI動態精算與莊家優勢補償】：";
+            hList.appendChild(badge);
             
-            finalReasonElem.innerText = `${resText}\n${edgeText}${lcWarning}莊家總分 ${bScore.toFixed(1)} vs 閒家總分 ${pScore.toFixed(1)}。成功觸發 ${validCores} 個高信心核心共振，突破極限防禦！AI 鎖定方向為 ${target === 'B' ? '莊' : '閒'}。`;
+            // 繪製和局斜線
+            if (res === 'T' && badge.lastChild && badge.lastChild.className !== "tie-indicator") {
+                let tieLine = document.createElement("div");
+                tieLine.className = "tie-indicator";
+                badge.appendChild(tieLine);
+            }
+        });
+        hList.scrollLeft = hList.scrollWidth;
 
-            let units = "1 單位 (平注測試)";
-            if (confidence >= 90 || hasResonance) units = "3 單位 (重注出擊)";
-            else if (confidence >= 82) units = "2 單位 (中度出擊)";
-            if (isEndShoe && !hasResonance) units += " ⚠️ (尾盤降級注碼)";
-            finalBettingElem.innerHTML = `<div class="bet-advice">建議注碼：${units}</div>`;
+        // 更新統計板
+        document.getElementById("statWinRate").innerText = totalBets > 0 ? ((winCount/totalBets)*100).toFixed(1) + "%" : "0.0%";
+        document.getElementById("statTotalBets").innerText = totalBets;
+        document.getElementById("statWinCount").innerText = winCount;
+        document.getElementById("statLossCount").innerText = lossCount;
+        document.getElementById("statSkipCount").innerText = skipCount;
+
+        // 渲染全新大路與下三路
+        function renderMatrix(id, seq, isBig) {
+            let c = document.getElementById(id); c.innerHTML = "";
+            buildRoadCols(seq).forEach(col => {
+                let d = document.createElement("div"); d.className = "road-col";
+                col.forEach(item => {
+                    let s = document.createElement("span");
+                    s.className = `mini-dot ${item === 'B' || item === 'RED' ? 'red' : (item === 'P' || item === 'BLUE' ? 'blue' : 'green')}`;
+                    d.appendChild(s);
+                });
+                c.appendChild(d);
+            });
+            c.scrollLeft = c.scrollWidth;
+        }
+        let pure = baccaratHistory.filter(x => x !== 'T');
+        renderMatrix("roadBigRoad", baccaratHistory, true);
+        renderMatrix("roadBigEye", getDownThreeRoadSequence(pure, 1));
+        renderMatrix("roadSmall", getDownThreeRoadSequence(pure, 2));
+        renderMatrix("roadCockroach", getDownThreeRoadSequence(pure, 3));
+
+        // 分析與最終預測輸出
+        let grid = document.getElementById("analysisGrid"); grid.innerHTML = "";
+        let cores = getAllCoresAnalysis(baccaratHistory);
+        cores.forEach(res => {
+            let tag = res.target === 'B' ? 'tag-B' : (res.target === 'P' ? 'tag-P' : 'tag-N');
+            let tText = res.target === 'B' ? '莊' : (res.target === 'P' ? '閒' : '觀望');
+            grid.innerHTML += `<div class="analysis-card">
+                <div class="card-header"><span class="card-title">${res.name}</span>
+                <div class="card-meta"><span class="card-conf">可信度 ${res.confidence}%</span> <span class="card-weight">權重 x${res.weight.toFixed(1)}</span> <span class="card-target ${tag}">${tText}</span></div></div>
+                <div class="section-box"><div class="section-title">📊 預測邏輯</div><div class="section-content">${res.logicReason}</div></div>
+                <div class="section-box"><div class="section-title">🛡️ 機制狀態</div><div class="section-content">${res.mechanismReason}</div></div>
+            </div>`;
+        });
+
+        let f = getFinalPredictionDetails(baccaratHistory);
+        document.getElementById("resonanceBadge").style.display = f.hasResonance ? 'block' : 'none';
+        let ft = document.getElementById("finalTarget"), fp = document.getElementById("finalPct"), fr = document.getElementById("finalReason"), fb = document.getElementById("finalBetting");
+        
+        if (f.reasonCode === 'WAIT') {
+            ft.innerText = "觀望"; ft.className = "final-target target-N"; fp.innerText = "累積數據中"; fr.innerText = "需至少10局有效數據。"; fb.innerHTML = "";
+        } else if (f.reasonCode === 'TIE_VETO') {
+            ft.innerText = "觀望 (混沌期)"; ft.className = "final-target target-N"; fp.innerText = "和局絕對否決"; fr.innerText = f.reasonText; fb.innerHTML = `<div class="bet-advice wait">嚴格空倉</div>`;
+        } else if (f.reasonCode === 'HIGH_VOLATILITY') {
+            ft.innerText = "觀望 (高頻絞殺)"; ft.className = "final-target target-N"; fp.innerText = "震盪過濾啟動"; fr.innerText = f.volText; fb.innerHTML = `<div class="bet-advice wait">嚴格空倉</div>`;
+        } else if (f.reasonCode === 'DEFENSE') {
+            ft.innerText = "觀望 (分數衝突)"; ft.className = "final-target target-N"; fp.innerText = "信號模糊"; fr.innerText = `莊家加權 (${f.bScore.toFixed(1)}) vs 閒家加權 (${f.pScore.toFixed(1)})，差距過小，防禦機制攔截。`; fb.innerHTML = `<div class="bet-advice wait">嚴格空倉</div>`;
+        } else {
+            ft.innerText = f.target === 'B' ? "莊 (B)" : "閒 (P)"; ft.className = `final-target target-${f.target}`; fp.innerText = `綜合可信度 ${f.confidence}%`;
+            fr.innerText = `${f.hasResonance ? "🔥 三路共振爆發！\n" : ""}莊家總分 ${f.bScore.toFixed(1)} vs 閒家總分 ${f.pScore.toFixed(1)}。成功觸發 ${f.valid} 個核心！`;
+            fb.innerHTML = `<div class="bet-advice">建議注碼：${f.hasResonance || f.confidence > 90 ? "3 單位 (重注)" : "1-2 單位 (平注)"}</div>`;
         }
     }
     updateUI();
