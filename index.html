@@ -515,7 +515,6 @@
             <span>閒 (P): <strong id="countP" class="hud-p">0</strong></span>
             <span>和 (T): <strong id="countT" class="hud-t">0</strong></span>
         </div>
-        <!-- 珠盤路 (6行直排面版) -->
         <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:-2px;">珠盤路紀錄 (包含預測賽果驗證)</div>
         <div id="historyList" class="history-list"></div>
 
@@ -722,9 +721,6 @@
         return colorSequence;
     }
 
-    // ==========================================
-    // 和局機制 (Tie Mechanism) 判定邏輯 (核心 5)
-    // ==========================================
     function getTieMechanismPrediction(history) {
         let tieGroups = [];
         let i = 0;
@@ -815,9 +811,6 @@
         return { active: true, target: target, confidence: 85, reason: reasonStr };
     }
 
-    // ==========================================
-    // 7 大核心指定分析邏輯
-    // ==========================================
     function analyzePatternCore(sequence) {
         let getItemName = (item) => item === 'RED' ? '紅點' : (item === 'BLUE' ? '藍點' : (item === 'B' ? '莊' : '閒'));
         if (!sequence || sequence.length < 3) return { target: 'NEUTRAL', confidence: 50, reason: '歷史數據不足預測' };
@@ -863,12 +856,11 @@
     }
 
     // ==========================================
-    // 破路/反打機制 (AI 深度分析與聯動模組)
+    // 破路/反打機制 (AI 動態敏感度升級版)
     // ==========================================
     function analyzeCoreWithMechanism(sequence) {
         let base = analyzePatternCore(sequence);
         let matrix = buildRoadMatrix(sequence);
-        let curLen = matrix.length > 0 ? matrix[matrix.length - 1].length : 0;
         let lastItem = sequence[sequence.length - 1];
         let oppositeItem = lastItem === 'B' ? 'P' : (lastItem === 'RED' ? 'BLUE' : (lastItem === 'P' ? 'B' : 'RED'));
         
@@ -879,49 +871,62 @@
         let finalTarget = base.target;
         let adjustedConfidence = base.confidence;
 
-        // 1. 判定斷路壓力級別
-        if (curLen <= 2) {
-            breakStrength = "低 (平穩)";
-            mechanismReason = `【破路機制】當前連續走勢長度為 ${curLen}，數據連續性平穩，反打臨界值低。預測信號正常釋放。`;
-            confidencePenalty = 0;
-        } else if (curLen === 3 || curLen === 4) {
-            breakStrength = "中 (警戒)";
-            mechanismReason = `【破路機制】當前連續走勢長度達 ${curLen}，開始累積斷路反打壓力（中臨界值）。預測信號受部分壓制。`;
-            confidencePenalty = 15;
-        } else if (curLen >= 5) {
-            breakStrength = "高 (強壓)";
-            // 當達到高壓力，準備交由後續 AI 進行覆蓋判定，因此先不扣減基礎分數
-            confidencePenalty = 0; 
+        // 計算近期盤勢震盪率 (Volatility) 代替死板的連開局數限制
+        let volatility = 0;
+        if (sequence.length >= 4) {
+            let recent = sequence.slice(-4);
+            let changes = 0;
+            for(let i = 1; i < recent.length; i++) {
+                if (recent[i] !== recent[i-1]) changes++;
+            }
+            volatility = changes; // 值介於 0(長龍) 到 3(單跳) 之間
         }
 
-        // 2. AI 核心判斷：對比常規邏輯與破路機制
+        // 1. 動態評估破路敏感度
+        if (base.confidence < 75) {
+            breakStrength = "中 (警戒)";
+            mechanismReason = `【AI 動態偵測】常規邏輯信號偏弱，系統自動提升破路敏感度，預測信號受壓制。`;
+            confidencePenalty = 10;
+        } else {
+            // AI 透過震盪率判斷是否具有高破路風險
+            if (base.target === lastItem && volatility >= 2) {
+                // 基礎邏輯叫你順打，但盤勢屬於高頻震盪 (極易破路)
+                breakStrength = "高 (強壓)";
+            } else if (base.target === oppositeItem && volatility === 0) {
+                // 基礎邏輯叫你反打，但盤勢是直線長龍 (逆向破路風險極高)
+                breakStrength = "高 (強壓)";
+            } else {
+                breakStrength = "中 (動態偵測)";
+                mechanismReason = `【AI 動態偵測】當前盤勢波動穩定，AI 持續監控破路臨界點。`;
+                confidencePenalty = 5;
+            }
+        }
+
+        // 2. AI 核心判斷：介入與共振
         if (breakStrength.includes("高")) {
             let getItemName = (item) => item === 'RED' ? '紅' : (item === 'BLUE' ? '藍' : (item === 'B' ? '莊' : '閒'));
             
             if (base.target === lastItem) {
-                // 情境 A：常規邏輯要求「順打」，但破路壓力極「高」 ➔ AI 強制介入，捨棄常規邏輯，改為破路反打
                 finalTarget = oppositeItem;
-                adjustedConfidence = 88; // 給予高信心反打
-                breakStrength = "極高 (AI 強制介入)";
-                mechanismReason = `【AI 強制破路判定】連續走勢達 ${curLen} 顆，斷路壓力處於極高狀態！常規邏輯 (順打) 與破路機制 (反打) 產生嚴重衝突，AI 強制介入，直接以【斷路反打 ${getItemName(oppositeItem)}】作為核心最終判定。`;
+                adjustedConfidence = Math.min(95, base.confidence + 12);
+                breakStrength = "極高 (AI 強制破路)";
+                mechanismReason = `【AI 敏銳破路判定】捨棄傳統長度限制！AI 偵測到底層高震盪率與順打邏輯發生嚴重衝突，強制介入並以【敏銳反打 ${getItemName(oppositeItem)}】作為最終判定。`;
             } else if (base.target === oppositeItem) {
-                // 情境 B：常規邏輯要求「反打」，破路壓力也極「高」 ➔ 雙機制共振，大幅提升信心
                 finalTarget = oppositeItem;
-                adjustedConfidence = Math.min(95, base.confidence + 15);
+                adjustedConfidence = Math.min(98, base.confidence + 18);
                 breakStrength = "極高 (AI 共振強化)";
-                mechanismReason = `【AI 共振破路判定】連續走勢達 ${curLen} 顆，極易斷路。常規邏輯亦支持反打，雙機制產生強烈共振，AI 大幅強化【斷路反打 ${getItemName(oppositeItem)}】之信心！`;
+                mechanismReason = `【AI 共振破路判定】AI 敏銳偵測到破路臨界點，且與常規反打邏輯完美共振！大幅強化【反打 ${getItemName(oppositeItem)}】之信心！`;
             } else {
-                // 情境 C：常規邏輯「觀望」，但破路壓力極「高」 ➔ AI 主動啟動破路訊號
                 finalTarget = oppositeItem;
-                adjustedConfidence = 80;
+                adjustedConfidence = 82;
                 breakStrength = "極高 (AI 主動啟動)";
-                mechanismReason = `【AI 主動破路判定】連續走勢達 ${curLen} 顆，破路壓力極高，即使常規邏輯觀望，AI 亦主動介入，直接釋放【斷路反打 ${getItemName(oppositeItem)}】訊號。`;
+                mechanismReason = `【AI 主動破路判定】破路臨界壓力已觸發，即使常規邏輯觀望，AI 亦主動釋放【敏銳反打 ${getItemName(oppositeItem)}】訊號。`;
             }
         } else if (finalTarget !== 'NEUTRAL') {
-            // 在中、低壓力下，套用常規的信賴度扣減
+            // 中低壓力下，套用常規信賴度扣減
             adjustedConfidence = Math.max(50, base.confidence - confidencePenalty);
             if (adjustedConfidence < 70 && breakStrength.includes("中")) {
-                mechanismReason += ` ➔ 警示：受反打臨界值壓制，信號已削弱至觀望門檻以下。`;
+                mechanismReason += ` ➔ 警示：受 AI 動態臨界壓制，信號已削弱至觀望門檻以下。`;
                 finalTarget = 'NEUTRAL';
             }
         }
@@ -939,12 +944,9 @@
 
     function analyzeBigRoadWithMechanism(pureHistory) {
         let res = analyzeCoreWithMechanism(pureHistory);
-        let matrix = buildRoadMatrix(pureHistory);
-        let curLen = matrix.length > 0 ? matrix[matrix.length - 1].length : 0;
         let lastItem = pureHistory[pureHistory.length - 1];
         let oppositeItem = lastItem === 'B' ? 'P' : 'B';
 
-        // 如果 AI 尚未強制反打，且原本是龍勢 (Logic 3)，我們再額外驗證下三路支持度
         if (res.isLogic3 && res.target === lastItem) {
             let c2Res = analyzeDownThreeRoadsWithMechanism(pureHistory, 1, '下三路 (大眼仔 核心 2)');
             let c3Res = analyzeDownThreeRoadsWithMechanism(pureHistory, 2, '下三路 (小路 核心 3)');
@@ -962,8 +964,8 @@
                     name: '大路形態 (核心 1)',
                     target: oppositeItem,
                     confidence: 86,
-                    logicReason: `【大路邏輯3調整】偵測到龍勢（連開 ${curLen} 顆），但下三路核心支持數僅 ${supportCount} 個（不足 2 個），觸發斷龍機制！`,
-                    mechanismReason: `【破路機制】龍勢缺乏其他路單支撐（支持數 ${supportCount}/3 < 2），判定【斷龍】預測下一局改為反打 ${getItemName(oppositeItem)}。`,
+                    logicReason: `【大路邏輯3調整】偵測到龍勢走勢，但下三路核心支持數僅 ${supportCount} 個（不足 2 個），觸發動態斷龍機制！`,
+                    mechanismReason: `【破路機制】龍勢缺乏其他路單支撐（支持數 ${supportCount}/3 < 2），AI 敏銳判定【斷龍】預測下一局改為反打 ${getItemName(oppositeItem)}。`,
                     breakStrength: '高 (斷龍反打)'
                 };
             }
@@ -995,7 +997,6 @@
         let targetColor = mechRes.target;
         let colorName = targetColor === 'RED' ? '紅' : '藍';
         
-        // 透過對位推算，將下三路的紅藍轉換回莊閒 (包含 AI 強制反打產生的顏色也能完美對位)
         let simB = pureHistory.concat(['B']);
         let simP = pureHistory.concat(['P']);
         let colorB = getDownThreeRoadSequence(simB, offset).pop();
@@ -1064,43 +1065,44 @@
         return [bigRoadRes, res1, res2, res3, tieRes];
     }
 
-    // AI 綜合評判與最終建議 (使用強弱訊號進行對決)
+    // AI 綜合評判與最終建議 (加入機率分析與雙核門檻)
     function getFinalPrediction(history) {
         let pureHistory = history.filter(x => x !== 'T');
         if (pureHistory.length < 10) return 'NEUTRAL';
 
         let cores = getAllCoresAnalysis(history);
-        let bScore = 0, pScore = 0;
+        let bScore = 0, pScore = 0, validCores = 0;
 
         cores.forEach(res => {
             if (res.target !== 'NEUTRAL' && res.confidence >= 70) {
-                if (res.target === 'B') {
-                    bScore += res.confidence; // 累加信心分數作為強弱訊號
-                } else if (res.target === 'P') {
-                    pScore += res.confidence;
-                }
+                validCores++;
+                if (res.target === 'B') bScore += res.confidence;
+                else if (res.target === 'P') pScore += res.confidence;
             }
         });
 
+        // 門檻 1：至少需要 2 個有效核心支撐才做決策
+        if (validCores < 2) return 'NEUTRAL';
+
+        // 門檻 2：權重差距過近防禦 (當差距 <= 25 時，AI將判定風險過高，轉為機率顯示並觀望)
+        let diff = Math.abs(bScore - pScore);
+        if (diff <= 25 && bScore > 0 && pScore > 0) return 'NEUTRAL';
+
         // 訊號對決
-        if (bScore === 0 && pScore === 0) return 'NEUTRAL';
         if (bScore > pScore) return 'B';
         if (pScore > bScore) return 'P';
         
-        // 若雙方訊號強度完全一樣，則選擇觀望以保證勝率
         return 'NEUTRAL';
     }
 
-    // 實戰預測戰績與統計 (嚴格遵循：用 0~i-1 的歷史來預測 i，並對照結果)
     function calculateAllStats() {
         let coreStats = Array(5).fill(null).map(() => ({ win: 0, loss: 0, total: 0 }));
         let overallTotalBets = 0, overallWinCount = 0, overallLossCount = 0, overallSkipCount = 0;
 
         for (let i = 1; i < baccaratHistory.length; i++) {
             let actualResult = baccaratHistory[i];
-            if (actualResult === 'T') continue; // 和局視為不計算常規莊閒下注輸贏
+            if (actualResult === 'T') continue; 
 
-            // 關鍵修復：預測第 i 局時，只能看前 0 到 i-1 局的結果 (不含未來的 i 局)
             let pastHistory = baccaratHistory.slice(0, i);
             let purePastHistory = pastHistory.filter(x => x !== 'T');
             if (purePastHistory.length < 10) continue;
@@ -1209,14 +1211,12 @@
         document.getElementById("countP").innerText = countP;
         document.getElementById("countT").innerText = countT;
 
-        // 重新修正珠盤路成功/不成功圖形標記，嚴格比對預測(0~i-1)與實際開出結果(i)
         baccaratHistory.forEach((res, index) => {
             let badge = document.createElement("div");
             badge.className = `badge-box badge-box-${res}`;
             badge.innerText = res === 'B' ? '莊' : (res === 'P' ? '閒' : '和');
             
             if (index > 0) {
-                // 預測 index 這一局時，只使用到 index 之前的歷史資料
                 let pastHistory = baccaratHistory.slice(0, index);
                 let purePastHistory = pastHistory.filter(x => x !== 'T');
                 if (purePastHistory.length >= 10) {
@@ -1261,7 +1261,6 @@
         document.getElementById("statLossCount").innerText = overallStats.lossCount;
         document.getElementById("statSkipCount").innerText = overallStats.skipCount;
 
-        // 當前的預測是指向尚未產生的「下一局」
         let analysisResults = getAllCoresAnalysis(baccaratHistory);
         let gridContainer = document.getElementById("analysisGrid");
         gridContainer.innerHTML = "";
@@ -1365,34 +1364,42 @@
             gridContainer.appendChild(card);
         });
 
-        // Ai 最終判定對決
-        if (bScore === 0 && pScore === 0) {
-            finalTargetElem.innerText = "預測下一局：觀望";
-            finalTargetElem.className = "final-target target-N";
-            finalPctElem.innerText = "綜合可信度 50.0%";
-            finalReasonElem.innerText = "多維核心與和局機制偵測到信號分歧或強度不足，系統全面觀望，建議暫緩下注。";
-        } else if (bScore === pScore) {
-            finalTargetElem.innerText = "預測下一局：觀望 (訊號衝突)";
+        // AI 最終判定對決與機率分析
+        if (validCores < 2) {
+            finalTargetElem.innerText = "預測下一局：觀望 (核心不足)";
             finalTargetElem.className = "final-target target-N";
             finalPctElem.innerText = "綜合可信度 --%";
-            finalReasonElem.innerText = `AI 偵測到莊家總信賴度 (${bScore}) 與閒家總信賴度 (${pScore}) 完全勢均力敵，為保護勝率，系統建議觀望。`;
+            finalReasonElem.innerText = `【AI綜合判定】：當前僅有 ${validCores} 個核心觸發有效訊號，未達至少 2 個核心的聯動門檻，為確保預測準確度與高勝率，系統建議觀望。`;
         } else {
-            let winningTarget = bScore > pScore ? 'B' : 'P';
-            let winVotes = winningTarget === 'B' ? bVotes : pVotes;
-            let winScore = winningTarget === 'B' ? bScore : pScore;
-            let avgWinConf = winScore / winVotes;
-            let consensusRate = winVotes / (validCores || 1);
-            let finalConfidence = (avgWinConf * 0.7 + consensusRate * 30).toFixed(1);
-
-            if (winningTarget === 'B') {
-                finalTargetElem.innerText = "預測下一局：莊 (B)";
-                finalTargetElem.className = "final-target target-B";
+            let diff = Math.abs(bScore - pScore);
+            
+            if (diff <= 25 && bScore > 0 && pScore > 0) {
+                let total = bScore + pScore;
+                let bProb = ((bScore / total) * 100).toFixed(1);
+                let pProb = ((pScore / total) * 100).toFixed(1);
+                
+                finalTargetElem.innerText = "預測下一局：觀望 (防禦機制)";
+                finalTargetElem.className = "final-target target-N";
+                finalPctElem.innerText = `機率估算：莊 ${bProb}% | 閒 ${pProb}%`;
+                finalReasonElem.innerText = `【AI機率分析】：莊家總權重 (${bScore}) 與閒家總權重 (${pScore}) 差距極小。為防範高風險，AI 自動轉為機率分析模式，預測本局莊閒出現概率為 莊 ${bProb}% vs 閒 ${pProb}%，強烈建議觀望。`;
             } else {
-                finalTargetElem.innerText = "預測下一局：閒 (P)";
-                finalTargetElem.className = "final-target target-P";
+                let winningTarget = bScore > pScore ? 'B' : 'P';
+                let winVotes = winningTarget === 'B' ? bVotes : pVotes;
+                let winScore = winningTarget === 'B' ? bScore : pScore;
+                let avgWinConf = winScore / winVotes;
+                let consensusRate = winVotes / (validCores || 1);
+                let finalConfidence = (avgWinConf * 0.7 + consensusRate * 30).toFixed(1);
+
+                if (winningTarget === 'B') {
+                    finalTargetElem.innerText = "預測下一局：莊 (B)";
+                    finalTargetElem.className = "final-target target-B";
+                } else {
+                    finalTargetElem.innerText = "預測下一局：閒 (P)";
+                    finalTargetElem.className = "final-target target-P";
+                }
+                finalPctElem.innerText = `綜合可信度 ${finalConfidence}%`;
+                finalReasonElem.innerText = `【AI綜合判定】：莊家總信號強度 ${bScore} vs 閒家總信號強度 ${pScore}。有效觸發 ${validCores} 個核心，AI 判定下一局未開出的方向為 ${winningTarget === 'B' ? '莊' : '閒'}。`;
             }
-            finalPctElem.innerText = `綜合可信度 ${finalConfidence}%`;
-            finalReasonElem.innerText = `【AI綜合判定】：莊家總信號強度 ${bScore} vs 閒家總信號強度 ${pScore}。有效觸發 ${validCores} 個核心，依據強弱訊號分析，AI 判定下一局未開出的方向為 ${winningTarget === 'B' ? '莊' : '閒'}。`;
         }
     }
 
