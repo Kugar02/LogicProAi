@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 嚴格 CSP 安全標頭 -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; frame-ancestors 'none';">
     <title>百家樂多維路單分析與旗艦預測系統 (大龍反打與和局重構版)</title>
     <style>
@@ -131,7 +132,7 @@
 
 <header>
     <h1>百家樂多維路單分析與旗艦預測系統</h1>
-    <p aria-live="polite">終極神級精算版 • 完美碰底轉彎矩陣 / 和局疊加疊影 / 大龍反打與和局重構</p>
+    <p aria-live="polite">終極神級精算版 • 碰底轉彎矩陣 / 大龍反打 / AI勝率預測機制</p>
 </header>
 
 <div class="panel-container">
@@ -325,12 +326,10 @@
 
             // 處理換列與轉彎
             if (item !== lastColor) {
-                // 換色，尋找第一排的空位
                 curCol = 0;
                 while (grid[curCol] && grid[curCol][0] !== undefined) curCol++;
                 curRow = 0;
             } else {
-                // 同色向下延伸；若碰到底 (row 5) 或是下方已有別的紀錄 (碰欄)，則向右轉彎
                 if (curRow + 1 < 6 && (!grid[curCol] || grid[curCol][curRow + 1] === undefined)) {
                     curRow++;
                 } else {
@@ -340,11 +339,10 @@
 
             if (!grid[curCol]) grid[curCol] = new Array(6);
             grid[curCol][curRow] = { val: item, ties: tieCount };
-            tieCount = 0; // 開局的連續和局放完後歸零
+            tieCount = 0;
             lastColor = item;
         }
 
-        // 處理整靴目前只有開出和局的極端狀態
         if (isBigRoad && lastColor === null && tieCount > 0) {
             if (!grid[0]) grid[0] = new Array(6);
             grid[0][0] = { val: 'T', ties: tieCount };
@@ -439,6 +437,8 @@
 
     function getAllCoresAnalysis(history) {
         let pure = history.filter(x => x !== 'T');
+        
+        // 確保未滿 10 局時顯示正確的 5 大核心名稱 (修復 undefined 問題)
         if (pure.length < 10) return [
             { name: '大路形態', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少10局', mechanismReason: '待命', weight: 1.0 },
             { name: '大眼仔路', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少10局', mechanismReason: '待命', weight: 1.0 },
@@ -506,7 +506,18 @@
             return { target: 'NEUTRAL', reasonCode: 'HIGH_VOLATILITY', bScore, pScore, volText: `【嚴格空倉】近15局出現 ${vol.chops} 次轉向。無三路共振絞殺盤，防禦保護本金。` };
         }
 
-        if (valid < 1 || Math.abs(bScore - pScore) < 35) return { target: 'NEUTRAL', reasonCode: 'DEFENSE', bScore, pScore };
+        // 防禦機制 1: 至少需要 2 個核心
+        if (valid < 2) {
+            return { target: 'NEUTRAL', reasonCode: 'NOT_ENOUGH_CORES', valid };
+        }
+
+        // 防禦機制 2: 權重差距過小，啟動 AI 勝率預測百分比
+        if (Math.abs(bScore - pScore) < 35) {
+            let total = bScore + pScore;
+            let bProb = total > 0 ? ((bScore / total) * 100).toFixed(1) : 50;
+            let pProb = total > 0 ? ((pScore / total) * 100).toFixed(1) : 50;
+            return { target: 'NEUTRAL', reasonCode: 'DEFENSE_PROBABILITY', bScore, pScore, bProb, pProb, valid };
+        }
         
         let target = bScore > pScore ? 'B' : 'P';
         let conf = ((bScore > pScore ? bScore : pScore) / (bScore > pScore ? bWeight : pWeight) * 0.6 + 40).toFixed(1);
@@ -532,7 +543,6 @@
 
         let totalBets = 0, winCount = 0, lossCount = 0, skipCount = 0;
         
-        // 珠盤路 (保留原始設計不變)
         baccaratHistory.forEach((res, i) => {
             let badge = document.createElement("div");
             badge.className = `badge-box badge-box-${res}`;
@@ -563,11 +573,10 @@
         document.getElementById("statLossCount").innerText = lossCount;
         document.getElementById("statSkipCount").innerText = skipCount;
 
-        // 全新 2D 矩陣網格渲染
         function renderTrueMatrixDOM(id, grid, isBigRoad) {
             let container = document.getElementById(id);
             container.innerHTML = "";
-            let maxCols = Math.max(25, grid.length + 2); // 最少保留25行確保版面不跑版
+            let maxCols = Math.max(25, grid.length + 2);
 
             for (let c = 0; c < maxCols; c++) {
                 let colDiv = document.createElement("div");
@@ -586,7 +595,6 @@
                         
                         dot.className = `mini-dot ${colorClass}`;
                         
-                        // 和局綠斜線疊加 (僅大路)
                         if (isBigRoad && data.ties > 0) {
                             let tieIndicator = document.createElement("div");
                             tieIndicator.className = "tie-indicator";
@@ -608,14 +616,11 @@
         }
 
         let pure = baccaratHistory.filter(x => x !== 'T');
-        // 大路 (傳入完整歷史紀錄，讓算法疊加和局)
         renderTrueMatrixDOM("roadBigRoad", buildTrueMatrix(baccaratHistory, true), true);
-        // 下三路 (傳入推導出的紅藍序列)
         renderTrueMatrixDOM("roadBigEye", buildTrueMatrix(getDerivedRoadSequence(pure, 1), false), false);
         renderTrueMatrixDOM("roadSmall", buildTrueMatrix(getDerivedRoadSequence(pure, 2), false), false);
         renderTrueMatrixDOM("roadCockroach", buildTrueMatrix(getDerivedRoadSequence(pure, 3), false), false);
 
-        // 儀表板
         let grid = document.getElementById("analysisGrid"); grid.innerHTML = "";
         let cores = getAllCoresAnalysis(baccaratHistory);
         cores.forEach(res => {
@@ -633,14 +638,23 @@
         document.getElementById("resonanceBadge").style.display = f.hasResonance ? 'block' : 'none';
         let ft = document.getElementById("finalTarget"), fp = document.getElementById("finalPct"), fr = document.getElementById("finalReason"), fb = document.getElementById("finalBetting");
         
+        // 更新顯示邏輯，支援 AI 勝率百分比
         if (f.reasonCode === 'WAIT') {
             ft.innerText = "觀望"; ft.className = "final-target target-N"; fp.innerText = "累積數據中"; fr.innerText = "需至少10局有效數據。"; fb.innerHTML = "";
         } else if (f.reasonCode === 'TIE_VETO') {
             ft.innerText = "觀望 (盤路失序)"; ft.className = "final-target target-N"; fp.innerText = "和局混沌保護"; fr.innerText = f.reasonText; fb.innerHTML = `<div class="bet-advice wait">嚴格空倉</div>`;
         } else if (f.reasonCode === 'HIGH_VOLATILITY') {
             ft.innerText = "觀望 (高頻絞殺)"; ft.className = "final-target target-N"; fp.innerText = "震盪過濾啟動"; fr.innerText = f.volText; fb.innerHTML = `<div class="bet-advice wait">嚴格空倉</div>`;
-        } else if (f.reasonCode === 'DEFENSE') {
-            ft.innerText = "觀望 (分數衝突)"; ft.className = "final-target target-N"; fp.innerText = "信號模糊"; fr.innerText = `莊家加權 (${f.bScore.toFixed(1)}) vs 閒家加權 (${f.pScore.toFixed(1)})，差距過小，防禦機制攔截。`; fb.innerHTML = `<div class="bet-advice wait">嚴格空倉</div>`;
+        } else if (f.reasonCode === 'NOT_ENOUGH_CORES') {
+            ft.innerText = "觀望 (訊號薄弱)"; ft.className = "final-target target-N"; 
+            fp.innerText = "核心共振不足"; 
+            fr.innerText = `目前僅觸發 ${f.valid} 個有效核心，未達最低 2 個核心的安全門檻，啟動防禦機制。`; 
+            fb.innerHTML = `<div class="bet-advice wait">嚴格空倉</div>`;
+        } else if (f.reasonCode === 'DEFENSE_PROBABILITY') {
+            ft.innerText = "觀望 (分數衝突)"; ft.className = "final-target target-N"; 
+            fp.innerText = `AI 勝率預測: 莊 ${f.bProb}% | 閒 ${f.pProb}%`; 
+            fr.innerText = `莊家加權 (${f.bScore.toFixed(1)}) vs 閒家加權 (${f.pScore.toFixed(1)})。\n核心訊號衝突且差距極小，防禦機制攔截。`; 
+            fb.innerHTML = `<div class="bet-advice wait">高風險，建議空倉</div>`;
         } else {
             ft.innerText = f.target === 'B' ? "莊 (B)" : "閒 (P)"; ft.className = `final-target target-${f.target}`; fp.innerText = `綜合可信度 ${f.confidence}%`;
             fr.innerText = `${f.hasResonance ? "🔥 三路共振爆發！\n" : ""}莊家總分 ${f.bScore.toFixed(1)} vs 閒家總分 ${f.pScore.toFixed(1)}。成功觸發 ${f.valid} 個核心！`;
