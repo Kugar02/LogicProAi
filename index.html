@@ -146,7 +146,7 @@
         .tie-advice.low { background: rgba(148, 163, 184, 0.15); color: var(--text-muted); border: 1px dashed var(--text-muted); }
 
         .stats-panel-bottom {background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin-top: 12px;}
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 12px;}
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 12px;}
         .stat-card {background-color: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; text-align: center; display: flex; flex-direction: column; gap: 4px;}
         .stat-value { font-size: 1.4rem; font-weight: bold; color: var(--text-color); }
         .rg-banner { position: fixed; bottom: 0; left: 0; width: 100%; background-color: #0f172a; color: #cbd5e1; text-align: center; padding: 10px; font-size: 0.85rem; border-top: 1px solid #334155; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.5); }
@@ -156,7 +156,7 @@
 
 <header>
     <h1>百家樂多維路單分析與旗艦預測系統</h1>
-    <p aria-live="polite">終極神級精算版 • 主動式和局狙擊系統 / AI 隱性干擾分析 / 全局動態防禦</p>
+    <p aria-live="polite">終極神級精算版 • 大數底盤機率融合 / 防盲目傾斜保護 / 淨勝單位統計</p>
 </header>
 
 <div class="panel-container">
@@ -240,6 +240,7 @@
     <div style="text-align:center; font-weight:bold; color:var(--accent-gold);">實戰預測戰績與統計</div>
     <div class="stats-grid">
         <div class="stat-card"><span class="stat-label">預測勝率 (%)</span><span id="statWinRate" class="stat-value win-rate">0.0%</span></div>
+        <div class="stat-card"><span class="stat-label">淨勝/負單位</span><span id="statNetUnits" class="stat-value">0</span></div>
         <div class="stat-card"><span class="stat-label">總下注局數</span><span id="statTotalBets" class="stat-value">0</span></div>
         <div class="stat-card"><span class="stat-label">預測成功</span><span id="statWinCount" class="stat-value" style="color:var(--win-color)">0</span></div>
         <div class="stat-card"><span class="stat-label">預測失敗</span><span id="statLossCount" class="stat-value" style="color:var(--loss-color)">0</span></div>
@@ -398,7 +399,7 @@
     }
 
     // ==========================================
-    // 獨立和局模擬引擎 (升級: 間距追蹤與主動狙擊下注建議)
+    // 獨立和局模擬引擎 (間距追蹤與主動狙擊下注建議)
     // ==========================================
     function simulateIndependentTieProbability(history) {
         if (history.length < 5) return { active: false, percent: 0, reason: "數據不足，無法執行和局預測", betAdvice: "等待數據", adviceClass: "low", tagClass: "tag-N" };
@@ -420,7 +421,6 @@
         }
         let finalPct = (hits / ITERS) * 100;
 
-        // 【間距追蹤】: 尋找上次出和局的距離
         let lastTieIndex = history.lastIndexOf('T');
         let handsSinceLastTie = lastTieIndex === -1 ? history.length : (history.length - 1 - lastTieIndex);
 
@@ -429,21 +429,17 @@
         let adviceClass = "low";
         let tagClass = "tag-N";
 
-        // 動態判定下注建議與間距壓力
         if (finalPct >= 22 || (finalPct >= 18 && handsSinceLastTie >= 8)) {
-            // 高機率區 或 (中高機率且間距拉長) -> 觸發狙擊
             betAdvice = "🎯 高賠率狙擊：建議下注 1 單位";
             adviceClass = "high";
             tagClass = "tag-SNIPER";
             reason += `🔥 【出手門檻達成】目前距離上次和局已 ${handsSinceLastTie} 局，機率與間距壓力雙重疊加，強烈建議出手打和！`;
         } else if (finalPct >= 15) {
-            // 溫水區
             betAdvice = "⚠️ 輕注試探：建議下注 0.5 單位";
             adviceClass = "mid";
             tagClass = "tag-T";
             reason += `💡 【和局機率浮現】目前距離上次和局已 ${handsSinceLastTie} 局，機率正在升溫，可嘗試輕注小博。`;
         } else {
-            // 低機率區
             betAdvice = "🛑 嚴格觀望 (不打和)";
             adviceClass = "low";
             tagClass = "tag-N";
@@ -504,7 +500,7 @@
         }
 
         if (curLen >= 7) return { target: oppItem, confidence: 97, reason: `【大龍臨界點】長連達極限 (長度${curLen})，動態預測將破路，啟動高強度反打！` };
-        if (jumpCount >= 6) return { target: lastItem, confidence: 96, reason: `【長單跳臨界點】單跳已達 ${jumpCount} 次，逼極極限變盤點，預測斷單跳！` };
+        if (jumpCount >= 6) return { target: lastItem, confidence: 96, reason: `【長單跳臨界點】單跳已達 ${jumpCount} 次，逼近極限變盤點，預測斷單跳！` };
 
         if (curLen === 1 && completedDoubles >= 4) return { target: oppItem, confidence: 95, reason: `【長雙跳臨界點】雙跳規律已達 ${completedDoubles} 次，極限變盤反打 (斷雙跳)。` };
         if (curLen === 2 && completedDoubles >= 3) return { target: lastItem, confidence: 94, reason: `【長雙跳臨界點】雙跳達極限，預測變盤轉長連。` };
@@ -609,14 +605,20 @@
 
     function getFinalPredictionDetails(history) {
         let pure = history.filter(x => x !== 'T');
-        if (pure.length < 5) return { target: 'NEUTRAL', reasonCode: 'WAIT', tieInfluenceText: '' };
+        if (pure.length < 5) return { target: 'NEUTRAL', reasonCode: 'WAIT', tieInfluenceText: '', activeNeutralCount: 0, betUnit: 0 };
         
         let cores = getAllCoresAnalysis(history);
         let bScore = 0, pScore = 0, valid = 0, bWeight = 0, pWeight = 0;
         
-        cores.forEach(c => {
+        let activeNeutralCount = 0;
+        cores.forEach((c, index) => {
             if (c.target === 'B') { bScore += c.confidence * c.weight; bWeight += c.weight; valid++; }
             if (c.target === 'P') { pScore += c.confidence * c.weight; pWeight += c.weight; valid++; }
+            
+            // 防盲目傾斜機制：如果核心路單成形，但卻給出NEUTRAL觀望 (排除數據不足/未成形)
+            if (index < 4 && c.target === 'NEUTRAL' && !c.logicReason.includes('不足') && !c.logicReason.includes('未成形')) {
+                activeNeutralCount++;
+            }
         });
 
         let lowers = [cores[1].target, cores[2].target, cores[3].target];
@@ -675,14 +677,17 @@
         let bProb = totalScore > 0 ? ((bScore / totalScore) * 100).toFixed(1) : 51.0;
         let pProb = totalScore > 0 ? ((pScore / totalScore) * 100).toFixed(1) : 49.0;
 
+        // 防盲目傾斜動態門檻 (有核心觀望時，門檻大幅拉高)
+        let gapThreshold = 35 + (activeNeutralCount * 25);
+
         if (vol.isChoppy && !hasResonance && valid < 3) {
-            return { target: 'NEUTRAL', reasonCode: 'HIGH_VOLATILITY', bScore, pScore, bProb, pProb, volText: `【嚴格空倉】近15局出現 ${vol.chops} 次轉向。無三路共振絞殺盤，防禦保護本金。`, tieInfluenceText };
+            return { target: 'NEUTRAL', reasonCode: 'HIGH_VOLATILITY', bScore, pScore, bProb, pProb, volText: `【嚴格空倉】近15局出現 ${vol.chops} 次轉向。無三路共振絞殺盤，防禦保護本金。`, tieInfluenceText, activeNeutralCount, betUnit: 0 };
         }
         if (valid < 2) {
-            return { target: 'NEUTRAL', reasonCode: 'NOT_ENOUGH_CORES', bScore, pScore, bProb, pProb, valid, tieInfluenceText };
+            return { target: 'NEUTRAL', reasonCode: 'NOT_ENOUGH_CORES', bScore, pScore, bProb, pProb, valid, tieInfluenceText, activeNeutralCount, betUnit: 0 };
         }
-        if (Math.abs(bScore - pScore) < 35) {
-            return { target: 'NEUTRAL', reasonCode: 'DEFENSE_PROBABILITY', bScore, pScore, bProb, pProb, valid, tieInfluenceText };
+        if (Math.abs(bScore - pScore) < gapThreshold) {
+            return { target: 'NEUTRAL', reasonCode: 'DEFENSE_PROBABILITY', bScore, pScore, bProb, pProb, valid, tieInfluenceText, activeNeutralCount, betUnit: 0 };
         }
         
         let target = bScore > pScore ? 'B' : 'P';
@@ -694,7 +699,9 @@
         if (hasResonance && target === resTarget) conf = Math.max(92, conf);
         if (cores[0].confidence >= 95) conf = Math.max(90, conf);
         
-        return { target, confidence: conf, bScore, pScore, bProb, pProb, valid, hasResonance, tieInfluenceText };
+        let betUnit = (hasResonance || conf >= 90) ? 3 : 1;
+
+        return { target, confidence: conf, bScore, pScore, bProb, pProb, valid, hasResonance, tieInfluenceText, activeNeutralCount, betUnit };
     }
 
     function updateUI() {
@@ -712,9 +719,7 @@
         document.getElementById("countT").innerText = countT;
         document.getElementById("beadCountInfo").innerText = `總局數: ${baccaratHistory.length}/${MAX_HANDS} (有效: ${countB+countP}/5)`;
         
-        let totalBets = 0, winCount = 0, lossCount = 0, skipCount = 0;
-        
-        // 用於全局動態追蹤預測數據
+        let totalBets = 0, winCount = 0, lossCount = 0, skipCount = 0, netUnits = 0;
         let rawAiWins = 0;
         let rawAiBets = 0;
         
@@ -756,8 +761,16 @@
                             icon.className = "pred-icon";
                             let isWin = (finalTarget === res);
                             
-                            if (isWin) { icon.innerText = "✅"; winCount++; }
-                            else { icon.innerText = "❌"; lossCount++; }
+                            // 計算這把下注多少單位
+                            let betUnit = basePred.betUnit;
+
+                            if (isWin) { 
+                                icon.innerText = "✅"; winCount++; 
+                                netUnits += betUnit;
+                            } else { 
+                                icon.innerText = "❌"; lossCount++; 
+                                netUnits -= betUnit;
+                            }
                             
                             badge.appendChild(icon);
                         }
@@ -773,6 +786,11 @@
         document.getElementById("statWinCount").innerText = winCount;
         document.getElementById("statLossCount").innerText = lossCount;
         document.getElementById("statSkipCount").innerText = skipCount;
+        
+        // 渲染淨勝單位與動態顏色
+        let netUnitsEl = document.getElementById("statNetUnits");
+        netUnitsEl.innerText = (netUnits > 0 ? "+" : "") + netUnits;
+        netUnitsEl.style.color = netUnits > 0 ? "var(--win-color)" : (netUnits < 0 ? "var(--loss-color)" : "var(--text-color)");
 
         function renderTrueMatrixDOM(id, grid, isBigRoad) {
             let container = document.getElementById(id);
@@ -912,14 +930,23 @@
             fb.innerHTML = `<div class="bet-advice wait">嚴格空倉防禦</div>`;
             pbContainer.style.display = "none";
         } else if (f.reasonCode === 'HIGH_VOLATILITY' || f.reasonCode === 'NOT_ENOUGH_CORES' || f.reasonCode === 'DEFENSE_PROBABILITY') {
-            ft.innerText = f.reasonCode === 'HIGH_VOLATILITY' ? "觀望 (高頻絞殺)" : (f.reasonCode === 'NOT_ENOUGH_CORES' ? "觀望 (訊號薄弱)" : "觀望 (分數衝突)");
+            ft.innerText = f.reasonCode === 'HIGH_VOLATILITY' ? "觀望 (高頻絞殺)" : (f.reasonCode === 'NOT_ENOUGH_CORES' ? "觀望 (訊號薄弱)" : "觀望 (防盲目傾斜保護)");
             ft.className = "final-target target-N";
             fp.innerText = `AI 預測佔比: 莊 ${f.bProb}% | 閒 ${f.pProb}%`;
             
             let defendReason = "";
-            if (f.reasonCode === 'HIGH_VOLATILITY') defendReason = f.volText;
-            else if (f.reasonCode === 'NOT_ENOUGH_CORES') defendReason = `目前僅觸發 ${f.valid} 個有效核心，未達最低 2 個核心的安全門檻，啟動核心防禦。`;
-            else defendReason = `📊 已整合百家樂基礎概率 (莊51%/閒49%)。\n融合後權重：莊 (${f.bScore.toFixed(1)}) vs 閒 (${f.pScore.toFixed(1)})。\n核心訊號衝突且差距極小，防禦機制攔截。`;
+            if (f.reasonCode === 'HIGH_VOLATILITY') {
+                defendReason = f.volText;
+            } else if (f.reasonCode === 'NOT_ENOUGH_CORES') {
+                defendReason = `目前僅觸發 ${f.valid} 個有效核心，未達最低 2 個核心的安全門檻，啟動核心防禦。`;
+            } else {
+                // 防盲目傾斜動態顯示
+                if (f.activeNeutralCount > 0) {
+                    defendReason = `🚨【防盲目傾斜機制啟動】\n四大核心中出現 ${f.activeNeutralCount} 個強烈觀望訊號！\n為避免盲目帶風向，系統已大幅提高防禦門檻。\n融合後權重：莊 (${f.bScore.toFixed(1)}) vs 閒 (${f.pScore.toFixed(1)})。`;
+                } else {
+                    defendReason = `📊 已整合百家樂基礎概率 (莊51%/閒49%)。\n融合後權重：莊 (${f.bScore.toFixed(1)}) vs 閒 (${f.pScore.toFixed(1)})。\n核心訊號衝突且差距極小，防禦機制攔截。`;
+                }
+            }
             
             if (f.tieInfluenceText) defendReason += f.tieInfluenceText;
             fr.innerText = defendReason;
@@ -940,7 +967,7 @@
             if (f.tieInfluenceText) reasonText += f.tieInfluenceText;
 
             fr.innerText = reasonText;
-            fb.innerHTML = `<div class="bet-advice">建議注碼：${f.hasResonance || f.confidence >= 90 ? "3 單位 (強力訊號)" : "1-2 單位 (平注)"}</div>`;
+            fb.innerHTML = `<div class="bet-advice">建議注碼：${f.betUnit === 3 ? "3 單位 (強力訊號)" : "1 單位 (平注)"}</div>`;
             pbContainer.style.display = "flex";
             pbB.style.width = `${f.bProb}%`; pbB.innerText = `莊 ${f.bProb}%`;
             pbP.style.width = `${f.pProb}%`; pbP.innerText = `閒 ${f.pProb}%`;
