@@ -151,7 +151,7 @@
     <div class="history-container">
         <div class="history-title">
             <span>線上百家樂標準路單面板 (珠盤路與四大路)</span>
-            <span id="beadCountInfo" style="color:var(--accent-gold); font-weight:bold;">總局數: 0/100 (有效: 0/10)</span>
+            <span id="beadCountInfo" style="color:var(--accent-gold); font-weight:bold;">總局數: 0/100 (有效: 0/5)</span>
         </div>
         <div class="hud-stats-bar">
             <span>莊 (B): <strong id="countB" class="hud-b">0</strong></span>
@@ -217,7 +217,7 @@
             <div id="probBarP" class="prob-bar-p" style="width: 50%;">50%</div>
         </div>
 
-        <div id="finalReason" class="final-reason" style="margin-top: 12px;">需要至少 10 局有效數據才能啟動預測。</div>
+        <div id="finalReason" class="final-reason" style="margin-top: 12px;">需要至少 5 局有效數據才能啟動預測。</div>
         <div id="finalBetting"></div>
     </div>
 
@@ -353,7 +353,7 @@
     }
 
     function evaluateVolatility(pureHistory) {
-        if (pureHistory.length < 10) return { chops: 0, isChoppy: false };
+        if (pureHistory.length < 5) return { chops: 0, isChoppy: false };
         let recent15 = pureHistory.slice(-15);
         let directionChanges = 0;
         for (let i = 1; i < recent15.length; i++) {
@@ -386,7 +386,7 @@
     }
 
     function simulateIndependentTieProbability(history) {
-        if (history.length < 10) return { active: false, percent: 0, reason: "數據不足，無法執行和局預測" };
+        if (history.length < 5) return { active: false, percent: 0, reason: "數據不足，無法執行和局預測" };
         let tieCount = history.filter(x => x === 'T').length;
         let baseProb = tieCount / history.length;
         let recent10 = history.slice(-10);
@@ -523,11 +523,11 @@
 
     function getAllCoresAnalysis(history) {
         let pure = history.filter(x => x !== 'T');
-        if (pure.length < 10) return [
-            { name: '大路形態', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少10局', mechanismReason: '待命', weight: 1.0 },
-            { name: '大眼仔路', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少10局', mechanismReason: '待命', weight: 1.0 },
-            { name: '小路', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少10局', mechanismReason: '待命', weight: 1.0 },
-            { name: '曱甴路', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少10局', mechanismReason: '待命', weight: 1.0 }
+        if (pure.length < 5) return [
+            { name: '大路形態', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少5局', mechanismReason: '待命', weight: 1.0 },
+            { name: '大眼仔路', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少5局', mechanismReason: '待命', weight: 1.0 },
+            { name: '小路', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少5局', mechanismReason: '待命', weight: 1.0 },
+            { name: '曱甴路', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少5局', mechanismReason: '待命', weight: 1.0 }
         ];
 
         let vol = evaluateVolatility(pure);
@@ -565,7 +565,7 @@
 
     function getFinalPredictionDetails(history) {
         let pure = history.filter(x => x !== 'T');
-        if (pure.length < 10) return { target: 'NEUTRAL', reasonCode: 'WAIT', tieInfluenceText: '' };
+        if (pure.length < 5) return { target: 'NEUTRAL', reasonCode: 'WAIT', tieInfluenceText: '' };
         
         let cores = getAllCoresAnalysis(history);
         let bScore = 0, pScore = 0, valid = 0, bWeight = 0, pWeight = 0;
@@ -619,7 +619,7 @@
         }
 
         // ==========================================
-        // 新增：百家樂基本數學勝率基準融入
+        // 百家樂基本數學勝率基準融入
         // ==========================================
         // 基本優勝概率: 莊 45.8%, 閒 44.6%, 和 9.6%
         // 去除和局影響後之基準: 莊 51.0%, 閒 49.0%
@@ -669,7 +669,7 @@
         document.getElementById("countB").innerText = countB;
         document.getElementById("countP").innerText = countP;
         document.getElementById("countT").innerText = countT;
-        document.getElementById("beadCountInfo").innerText = `總局數: ${baccaratHistory.length}/${MAX_HANDS} (有效: ${countB+countP}/10)`;
+        document.getElementById("beadCountInfo").innerText = `總局數: ${baccaratHistory.length}/${MAX_HANDS} (有效: ${countB+countP}/5)`;
         
         let totalBets = 0, winCount = 0, lossCount = 0, skipCount = 0;
         
@@ -684,7 +684,7 @@
             
             if (i > 0 && res !== 'T') {
                 let past = baccaratHistory.slice(0, i);
-                if (past.filter(x=>x!=='T').length >= 10) {
+                if (past.filter(x=>x!=='T').length >= 5) {
                     let basePred = getFinalPredictionDetails(past);
                     if (basePred.target === 'NEUTRAL') {
                         skipCount++;
@@ -785,7 +785,7 @@
         grid.innerHTML = "";
         
         let tieSim = simulateIndependentTieProbability(baccaratHistory);
-        if(baccaratHistory.length >= 10) {
+        if(baccaratHistory.length >= 5) {
             grid.innerHTML += `
             <div class="analysis-card tie-card">
                 <div class="card-header"><span class="card-title">🎲 10萬局獨立和局模擬引擎</span>
@@ -869,7 +869,7 @@
         
         if (f.reasonCode === 'WAIT') {
             ft.innerText = "觀望"; ft.className = "final-target target-N";
-            fp.innerText = "累積數據中"; fr.innerText = "需至少10局有效數據。"; fb.innerHTML = "";
+            fp.innerText = "累積數據中"; fr.innerText = "需至少 5 局有效數據。"; fb.innerHTML = "";
             pbContainer.style.display = "none";
         } else if (f.reasonCode === 'CHAOS_DEFENSE') {
             ft.innerText = "觀望 (勝率震盪)"; ft.className = "final-target target-N";
