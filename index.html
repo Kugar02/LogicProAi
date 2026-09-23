@@ -136,7 +136,7 @@
 
 <header>
     <h1>百家樂多維路單分析與旗艦預測系統</h1>
-    <p aria-live="polite">終極神級精算版 • 置頂和局模擬 / 臨界點破路反打 / 視覺化圖形分析</p>
+    <p aria-live="polite">終極神級精算版 • 置頂和局模擬 / 動態雙跳矩陣 / 逢跳連 AI 偵測</p>
 </header>
 
 <div class="panel-container">
@@ -202,7 +202,6 @@
         <div id="finalTarget" class="final-target target-N">觀望 (累積數據中)</div>
         <div id="finalPct" class="confidence-box">綜合可信度 --%</div>
         
-        <!-- 莊閒圖形化百分比條 -->
         <div id="probBarContainer" class="prob-bar-container" style="display: none;">
             <div id="probBarB" class="prob-bar-b" style="width: 50%;">50%</div>
             <div id="probBarP" class="prob-bar-p" style="width: 50%;">50%</div>
@@ -212,9 +211,7 @@
         <div id="finalBetting"></div>
     </div>
 
-    <div class="analysis-grid" id="analysisGrid">
-        <!-- JS 動態生成：置頂和局卡片 + 其他分析卡片 -->
-    </div>
+    <div class="analysis-grid" id="analysisGrid"></div>
 </div>
 
 <div class="stats-panel-bottom">
@@ -261,7 +258,7 @@
         let inputStr = document.getElementById("batchInput").value.trim();
         if (!inputStr) return;
         
-        let cleanStr = inputStr.toUpperCase().replace(/莊/g, 'B').replace(/閒/g, 'P').replace(/和/g, 'T');
+        let cleanStr = inputStr.toUpperCase().replace(/莊/g, 'B').replace(/閒/g, 'P').replace(/和/g, 'T').replace(/紅/g, 'RED').replace(/藍/g, 'BLUE');
         let tokens = cleanStr.split(/,|\s|;|\|/);
         let parsed = [];
         
@@ -282,18 +279,12 @@
         updateUI();
     }
 
-    // ==========================================
-    // 邏輯抽象列 (僅用於 AI 分析核心)
-    // ==========================================
     function buildLogicalCols(pureHistory) {
         if (!pureHistory || pureHistory.length === 0) return [];
         let cols = [], cur = [pureHistory[0]];
         for (let i = 1; i < pureHistory.length; i++) {
             if (pureHistory[i] === pureHistory[i-1]) cur.push(pureHistory[i]);
-            else {
-                cols.push(cur);
-                cur = [pureHistory[i]];
-            }
+            else { cols.push(cur); cur = [pureHistory[i]]; }
         }
         if (cur.length > 0) cols.push(cur);
         return cols;
@@ -324,7 +315,6 @@
     function buildTrueMatrix(sequence, isBigRoad) {
         let grid = []; 
         let curCol = 0, curRow = 0, lastColor = null, tieCount = 0;
-
         for (let i = 0; i < sequence.length; i++) {
             let item = sequence[i];
             if (isBigRoad && item === 'T') {
@@ -337,11 +327,8 @@
                 while (grid[curCol] && grid[curCol][0] !== undefined) curCol++;
                 curRow = 0;
             } else {
-                if (curRow + 1 < 6 && (!grid[curCol] || grid[curCol][curRow + 1] === undefined)) {
-                    curRow++;
-                } else {
-                    curCol++; 
-                }
+                if (curRow + 1 < 6 && (!grid[curCol] || grid[curCol][curRow + 1] === undefined)) curRow++;
+                else curCol++; 
             }
             if (!grid[curCol]) grid[curCol] = new Array(6);
             grid[curCol][curRow] = { val: item, ties: tieCount };
@@ -355,9 +342,6 @@
         return grid;
     }
 
-    // ==========================================
-    // 動態 AI 核心邏輯
-    // ==========================================
     function evaluateVolatility(pureHistory) {
         if (pureHistory.length < 10) return { chops: 0, isChoppy: false };
         let recent15 = pureHistory.slice(-15);
@@ -391,83 +375,126 @@
         return { override: false, reason: `【10萬局深度模擬】趨勢動態平衡，採納常規分析邏輯。` };
     }
 
-    // ==========================================
-    // 獨立和局 10 萬局模擬引擎 (不影響主推莊閒權重)
-    // ==========================================
     function simulateIndependentTieProbability(history) {
         if (history.length < 10) return { active: false, percent: 0, reason: "數據不足，無法執行和局預測" };
-        
         let tieCount = history.filter(x => x === 'T').length;
         let baseProb = tieCount / history.length;
-        
         let recent10 = history.slice(-10);
         let recentTieCount = recent10.filter(x => x === 'T').length;
         let recentProb = recentTieCount / 10;
-        
-        // 綜合機率模型加權
         let combinedProb = (baseProb * 0.4) + (recentProb * 0.6);
-        if (combinedProb < 0.05) combinedProb = 0.09; // 保底百家樂原始和局率約 9.5%
+        if (combinedProb < 0.05) combinedProb = 0.09;
         
         let hits = 0;
         const ITERS = 100000;
         for(let i=0; i<ITERS; i++) {
-            let noise = (Math.random() - 0.5) * 0.06; // 隨機震盪
+            let noise = (Math.random() - 0.5) * 0.06;
             if (Math.random() < (combinedProb + noise)) hits++;
         }
         
         let finalPct = (hits / ITERS) * 100;
-        let active = finalPct > 15; // 超過15%才視為值得關注
+        let active = finalPct > 15;
         let reason = `AI 已模擬 10 萬局未來演進。依據本靴全局數據 (${tieCount}次和) 及近期 10 局波動，預測下一局出現「和局」機率為 ${finalPct.toFixed(1)}%。`;
-        
-        if (finalPct >= 25) {
-            reason += " ⚠️【和局高風險區】近期和局頻繁爆發，強烈建議保守下注或防禦性打和。";
-        } else if (finalPct < 10) {
-            reason += " 📉 盤路穩定，和局干擾機率極低。";
-        }
-
+        if (finalPct >= 25) reason += " ⚠️【和局高風險區】近期和局頻繁爆發，強烈建議保守下注或防禦性打和。";
+        else if (finalPct < 10) reason += " 📉 盤路穩定，和局干擾機率極低。";
         return { active: true, percent: finalPct.toFixed(1), reason: reason, isHighRisk: finalPct >= 20 };
     }
 
     // ==========================================
-    // 核心型態判斷 (重構: 單跳、大龍臨界點、補齊與房廳)
+    // 核心型態判斷 (全域邏輯: 單跳, 雙跳, 逢跳連, 房廳)
     // ==========================================
     function analyzePatternCore(sequence) {
         if (!sequence || sequence.length < 3) return { target: 'NEUTRAL', confidence: 50, reason: '數據不足' };
+        
         let matrix = buildLogicalCols(sequence);
         let numCols = matrix.length;
         let colLens = matrix.map(c => c.length);
-        
         let curLen = colLens[numCols - 1];
         let lastItem = sequence[sequence.length - 1];
         let oppItem = lastItem === 'B' ? 'P' : (lastItem === 'RED' ? 'BLUE' : (lastItem === 'P' ? 'B' : 'RED'));
         
+        let cName = (item) => {
+            if (item === 'B') return '莊'; if (item === 'P') return '閒';
+            if (item === 'RED') return '紅'; if (item === 'BLUE') return '藍';
+            return item;
+        };
+
+        // 1. 單跳次數統計 (1-1-1...)
         let jumpCount = 0;
         for(let i = numCols - 1; i >= 0; i--) {
-            if(colLens[i] === 1) jumpCount++;
-            else break;
+            if(colLens[i] === 1) jumpCount++; else break;
         }
 
-        let l1 = colLens[numCols - 1] || 0;
-        let l2 = colLens[numCols - 2] || 0;
-        let l3 = colLens[numCols - 3] || 0;
+        // 2. 雙跳次數統計 (2-2-2...)
+        let completedDoubles = 0;
+        let checkIdx = curLen === 1 ? numCols - 2 : (curLen === 2 ? numCols - 2 : numCols - 1);
+        if (curLen > 2) completedDoubles = 0; // 若大於2即不在雙跳發展範圍
+        else {
+            while (checkIdx >= 0) {
+                if (colLens[checkIdx] === 2) completedDoubles++; else break;
+                checkIdx--;
+            }
+        }
 
-        // 【臨界點動態分析】：長單跳與大龍破路
-        if (curLen >= 7) return { target: oppItem, confidence: 97, reason: `【大龍臨界點破路】長龍達到物理極限 (長度${curLen})，動態分析判斷即將斷纜，觸發高強度反打！` };
-        if (jumpCount >= 6) return { target: lastItem, confidence: 96, reason: `【長單跳臨界點】單跳已達 ${jumpCount} 次，逼近變盤臨界點，啟動反打 (預測斷單跳)！` };
+        // 3. AI 逢紅/藍跳 & 逢紅/藍連 偵測 (觀察最近 6 攔)
+        let colorJump = null;
+        let colorStreak = null;
+        if (numCols >= 4) {
+            let recentMatrix = matrix.slice(Math.max(0, numCols - 6));
+            let uniqueColors = [...new Set(recentMatrix.map(c => c[0]))];
+            
+            uniqueColors.forEach(colColor => {
+                let colorCols = recentMatrix.filter(c => c[0] === colColor);
+                if (colorCols.length >= 2) {
+                    let allJumps = colorCols.every(c => c.length === 1);
+                    // 若是尋找連，已完成的列必須 > 1，當前最新的一列若只有 1 且顏色相符，視為還在發育中
+                    let allStreaks = colorCols.every(c => {
+                        return (c === matrix[numCols-1]) ? true : (c.length > 1);
+                    });
+                    if (allJumps && !allStreaks) colorJump = colColor;
+                    if (allStreaks && !allJumps && colorCols[0].length > 1) colorStreak = colColor;
+                }
+            });
+        }
+
+        // ========================
+        // AI 決策權重 (自上而下優先)
+        // ========================
         
-        // 【順勢延續】：短單跳與中短龍
-        if (curLen >= 4) return { target: lastItem, confidence: 91, reason: `【大龍順勢】目前連 ${curLen}，趨勢強烈未見頂，順打延續。` };
-        if (jumpCount >= 3) return { target: oppItem, confidence: 89, reason: `【短單跳】規律成形 (單跳 ${jumpCount} 次)，順勢單跳。` };
+        // A. 大龍與極端單跳臨界點 (強制反打)
+        if (curLen >= 7) return { target: oppItem, confidence: 97, reason: `【大龍臨界點】長連達極限 (長度${curLen})，動態預測將破路，啟動高強度反打！` };
+        if (jumpCount >= 6) return { target: lastItem, confidence: 96, reason: `【長單跳臨界點】單跳已達 ${jumpCount} 次，逼近極限變盤點，預測斷單跳！` };
 
-        // 【矩陣對稱與補齊/反打】：3-2, 3-3-2, 2-3, 3-3-3
+        // B. 雙跳邏輯矩陣 (短/中/長)
+        if (curLen === 1 && completedDoubles >= 4) return { target: oppItem, confidence: 95, reason: `【長雙跳臨界點】雙跳規律已達 ${completedDoubles} 次，極限變盤反打 (斷雙跳)。` };
+        if (curLen === 2 && completedDoubles >= 3) return { target: lastItem, confidence: 94, reason: `【長雙跳臨界點】雙跳達極限，預測變盤轉長連。` };
+        
+        if (curLen === 1 && completedDoubles === 3) return { target: lastItem, confidence: 92, reason: `【中雙跳】雙跳規律強烈 (${completedDoubles}次)，順勢補齊。` };
+        if (curLen === 2 && completedDoubles === 2) return { target: oppItem, confidence: 91, reason: `【中雙跳】雙跳滿2，順勢換向。` };
+
+        if (curLen === 1 && completedDoubles === 2) return { target: lastItem, confidence: 88, reason: `【短雙跳】雙跳初步成形，順勢補齊。` };
+        if (curLen === 2 && completedDoubles === 1) return { target: oppItem, confidence: 86, reason: `【短雙跳】雙跳滿2，順勢換向。` };
+
+        // C. 單跳邏輯矩陣 (短/中)
+        if (jumpCount >= 4) return { target: oppItem, confidence: 92, reason: `【中單跳】規律強烈 (單跳 ${jumpCount} 次)，順勢跟單跳。` };
+        if (jumpCount === 3) return { target: oppItem, confidence: 89, reason: `【短單跳】規律初步成形 (${jumpCount} 次)，順勢單跳。` };
+
+        // D. AI 逢X跳 / 逢X連
+        if (curLen === 1 && colorJump === lastItem) return { target: oppItem, confidence: 90, reason: `【逢${cName(lastItem)}跳】AI 偵測近期逢${cName(lastItem)}必跳，順勢反打換向。` };
+        if (curLen === 1 && colorStreak === lastItem) return { target: lastItem, confidence: 90, reason: `【逢${cName(lastItem)}連】AI 偵測近期逢${cName(lastItem)}必連，順勢跟進打連。` };
+
+        // E. 長連順勢
+        if (curLen >= 4) return { target: lastItem, confidence: 91, reason: `【長連順勢】目前連 ${curLen}，趨勢強勁未見頂，順打延續。` };
+
+        // F. 矩陣補齊與房廳 (Matrix & Rooms)
+        let l1 = colLens[numCols - 1] || 0; let l2 = colLens[numCols - 2] || 0; let l3 = colLens[numCols - 3] || 0;
         if (numCols >= 3 && l3===3 && l2===3 && l1===2) return { target: lastItem, confidence: 90, reason: `【3-3-2 補齊】完美對稱成形，順打補齊第 3 粒。` };
         if (numCols >= 3 && l3===3 && l2===3 && l1===3) return { target: oppItem, confidence: 93, reason: `【3-3-3 反打】長度達區塊極限，觸發變盤反打。` };
         if (numCols >= 2 && l2===3 && l1===2) return { target: lastItem, confidence: 85, reason: `【3-2 補齊】短路對稱，順打補齊。` };
         if (numCols >= 2 && l2===2 && l1===3) return { target: oppItem, confidence: 87, reason: `【2-3 反打】長度超越前列，預測即將轉向。` };
-
-        // 【1房2廳 / 2房1廳】
+        
         if (numCols >= 2 && l2===1 && l1===2) return { target: oppItem, confidence: 85, reason: `【1房2廳】前單後雙規律，預測即將轉向 (反打)。` };
-        if (numCols >= 2 && l2===2 && l1===1) return { target: oppItem, confidence: 85, reason: `【2房1廳】前雙後單規律，預測跳向以延續震盪。` };
+        if (numCols >= 2 && l2===2 && l1===1) return { target: oppItem, confidence: 85, reason: `【2房1廳】前雙後單規律，預測跳向延續震盪。` };
 
         return { target: 'NEUTRAL', confidence: 50, reason: '未符常規強烈邏輯，建議觀望。' };
     }
@@ -504,7 +531,6 @@
 
     function getAllCoresAnalysis(history) {
         let pure = history.filter(x => x !== 'T');
-        
         if (pure.length < 10) return [
             { name: '大路形態', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少10局', mechanismReason: '待命', weight: 1.0 },
             { name: '大眼仔路', target: 'NEUTRAL', confidence: 50, logicReason: '數據不足，需至少10局', mechanismReason: '待命', weight: 1.0 },
@@ -550,8 +576,8 @@
         if (pure.length < 10) return { target: 'NEUTRAL', reasonCode: 'WAIT' };
         
         let cores = getAllCoresAnalysis(history);
-        
         let bScore = 0, pScore = 0, valid = 0, bWeight = 0, pWeight = 0;
+        
         cores.forEach(c => {
             if (c.target === 'B') { bScore += c.confidence * c.weight; bWeight += c.weight; valid++; }
             if (c.target === 'P') { pScore += c.confidence * c.weight; pWeight += c.weight; valid++; }
@@ -562,9 +588,8 @@
         if (lowers.every(t => t === 'B')) { hasResonance = true; resTarget = 'B'; bScore += 80; valid++; }
         if (lowers.every(t => t === 'P')) { hasResonance = true; resTarget = 'P'; pScore += 80; valid++; }
         
-        bScore *= 1.03; // 微調莊家優勢
+        bScore *= 1.03; 
         let vol = evaluateVolatility(pure);
-        
         let totalScore = bScore + pScore;
         let bProb = totalScore > 0 ? ((bScore / totalScore) * 100).toFixed(1) : 50;
         let pProb = totalScore > 0 ? ((pScore / totalScore) * 100).toFixed(1) : 50;
@@ -572,31 +597,24 @@
         if (vol.isChoppy && !hasResonance && valid < 3) {
             return { target: 'NEUTRAL', reasonCode: 'HIGH_VOLATILITY', bScore, pScore, bProb, pProb, volText: `【嚴格空倉】近15局出現 ${vol.chops} 次轉向。無三路共振絞殺盤，防禦保護本金。` };
         }
-        
         if (valid < 2) {
             return { target: 'NEUTRAL', reasonCode: 'NOT_ENOUGH_CORES', bScore, pScore, bProb, pProb, valid };
         }
-        
         if (Math.abs(bScore - pScore) < 35) {
             return { target: 'NEUTRAL', reasonCode: 'DEFENSE_PROBABILITY', bScore, pScore, bProb, pProb, valid };
         }
         
         let target = bScore > pScore ? 'B' : 'P';
         let conf = ((bScore > pScore ? bScore : pScore) / (bScore > pScore ? bWeight : pWeight) * 0.6 + 40).toFixed(1);
-        
         if (hasResonance && target === resTarget) conf = Math.max(92, conf);
         if (cores[0].confidence >= 95) conf = Math.max(90, conf);
         
         return { target, confidence: conf, bScore, pScore, bProb, pProb, valid, hasResonance };
     }
 
-    // ==========================================
-    // UI 主渲染更新區塊
-    // ==========================================
     function updateUI() {
         let hList = document.getElementById("historyList");
         hList.innerHTML = "";
-        
         let countB = 0, countP = 0, countT = 0;
         baccaratHistory.forEach(x => {
             if(x==='B') countB++;
@@ -615,7 +633,6 @@
             let badge = document.createElement("div");
             badge.className = `badge-box badge-box-${res}`;
             badge.innerText = res === 'B' ? '莊' : (res === 'P' ? '閒' : '和');
-            
             if (i > 0 && res !== 'T') {
                 let past = baccaratHistory.slice(0, i);
                 if (past.filter(x=>x!=='T').length >= 10) {
@@ -657,7 +674,6 @@
                         let colorClass = "";
                         if (isBigRoad) colorClass = data.val === 'B' ? 'red' : (data.val === 'P' ? 'blue' : 'green');
                         else colorClass = (data.val === 'RED' || data.val === 'red') ? 'red' : 'blue';
-                        
                         dot.className = `mini-dot ${colorClass}`;
                         if (isBigRoad && data.ties > 0) {
                             let tieIndicator = document.createElement("div");
@@ -688,7 +704,6 @@
         let grid = document.getElementById("analysisGrid");
         grid.innerHTML = "";
         
-        // 1. 置頂渲染【和局專屬分析模擬器】
         let tieSim = simulateIndependentTieProbability(baccaratHistory);
         if(baccaratHistory.length >= 10) {
             grid.innerHTML += `
@@ -702,7 +717,6 @@
             </div>`;
         }
 
-        // 2. 渲染常規四大路核心分析
         let cores = getAllCoresAnalysis(baccaratHistory);
         let coreHTML = `<div class="analysis-cores">`;
         cores.forEach(res => {
@@ -720,10 +734,8 @@
         coreHTML += `</div>`;
         grid.innerHTML += coreHTML;
 
-        // 3. 處理最終預測與百分比圖形條
         let f = getFinalPredictionDetails(baccaratHistory);
         document.getElementById("resonanceBadge").style.display = f.hasResonance ? 'block' : 'none';
-        
         let ft = document.getElementById("finalTarget"), fp = document.getElementById("finalPct"), fr = document.getElementById("finalReason"), fb = document.getElementById("finalBetting");
         let pbContainer = document.getElementById("probBarContainer"), pbB = document.getElementById("probBarB"), pbP = document.getElementById("probBarP");
         
@@ -739,15 +751,13 @@
             else if (f.reasonCode === 'NOT_ENOUGH_CORES') fr.innerText = `目前僅觸發 ${f.valid} 個有效核心，未達最低 2 個核心的安全門檻，啟動防禦機制。`;
             else fr.innerText = `莊家加權 (${f.bScore.toFixed(1)}) vs 閒家加權 (${f.pScore.toFixed(1)})。\n核心訊號衝突且差距極小，防禦機制攔截。`;
             fb.innerHTML = `<div class="bet-advice wait">嚴格空倉防禦</div>`;
-            pbContainer.style.display = "none"; // 觀望狀態隱藏條列
+            pbContainer.style.display = "none";
         } else {
             ft.innerText = f.target === 'B' ? "莊 (B)" : "閒 (P)";
             ft.className = `final-target target-${f.target}`;
             fp.innerText = `綜合可信度 ${f.confidence}%`;
             fr.innerText = `${f.hasResonance ? "🔥 三路共振爆發！\n" : ""}莊家加權 ${f.bScore.toFixed(1)} vs 閒家加權 ${f.pScore.toFixed(1)}。成功觸發 ${f.valid} 個核心！`;
             fb.innerHTML = `<div class="bet-advice">建議注碼：${f.hasResonance || f.confidence >= 90 ? "3 單位 (強力訊號)" : "1-2 單位 (平注)"}</div>`;
-            
-            // 顯示莊閒百分比圖形
             pbContainer.style.display = "flex";
             pbB.style.width = `${f.bProb}%`; pbB.innerText = `莊 ${f.bProb}%`;
             pbP.style.width = `${f.pProb}%`; pbP.innerText = `閒 ${f.pProb}%`;
