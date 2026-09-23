@@ -87,7 +87,7 @@
         .dashboard { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; margin-bottom: 20px; }
         @media (max-width: 820px) { .dashboard { grid-template-columns: 1fr; } }
         .final-card {background-color: var(--card-bg); border: 2px solid var(--accent-gold); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative;}
-        .final-title { font-size: 1 rem; color: var(--text-muted); margin-bottom: 8px; font-weight: bold; margin-top: 8px;}
+        .final-title { font-size: 1rem; color: var(--text-muted); margin-bottom: 8px; font-weight: bold; margin-top: 8px;}
         .final-target { font-size: 1.8rem; font-weight: 800; margin-bottom: 6px; }
         .target-B { color: var(--banker-color); }
         .target-P { color: var(--player-color); }
@@ -144,7 +144,7 @@
 
 <header>
     <h1>百家樂多維路單分析與旗艦預測系統</h1>
-    <p aria-live="polite">終極神級精算版 • 置頂和局模擬 / 動態雙跳矩陣 / 正反打房防禦機制</p>
+    <p aria-live="polite">終極神級精算版 • 置頂和局模擬 / AI 隱性和局干擾分析 / 正反打房防禦</p>
 </header>
 
 <div class="panel-container">
@@ -565,7 +565,7 @@
 
     function getFinalPredictionDetails(history) {
         let pure = history.filter(x => x !== 'T');
-        if (pure.length < 10) return { target: 'NEUTRAL', reasonCode: 'WAIT' };
+        if (pure.length < 10) return { target: 'NEUTRAL', reasonCode: 'WAIT', tieInfluenceText: '' };
         
         let cores = getAllCoresAnalysis(history);
         let bScore = 0, pScore = 0, valid = 0, bWeight = 0, pWeight = 0;
@@ -579,21 +579,65 @@
         let hasResonance = false, resTarget = null;
         if (lowers.every(t => t === 'B')) { hasResonance = true; resTarget = 'B'; bScore += 80; valid++; }
         if (lowers.every(t => t === 'P')) { hasResonance = true; resTarget = 'P'; pScore += 80; valid++; }
+
+        // ==========================================
+        // AI 和局隱性影響分析機制 (Hidden Tie Influence)
+        // ==========================================
+        let tieInfluenceText = "";
+        let bAfterTie = 0, pAfterTie = 0;
+        // 1. 回測本靴「和局後」的開出慣性
+        for(let i = 0; i < history.length - 1; i++) {
+            if(history[i] === 'T') {
+                for(let j = i + 1; j < history.length; j++) {
+                    if(history[j] === 'B') { bAfterTie++; break; }
+                    if(history[j] === 'P') { pAfterTie++; break; }
+                }
+            }
+        }
+        let lastItem = history[history.length - 1];
+        let secondLastItem = history.length >= 2 ? history[history.length - 2] : null;
+        let tieRecent = (lastItem === 'T' || secondLastItem === 'T');
+
+        // 2. 近端觸發隱性權重加給
+        if (tieRecent && (bAfterTie > 0 || pAfterTie > 0)) {
+            if (bAfterTie > pAfterTie) {
+                bScore += 15;
+                tieInfluenceText += `\n👻【和局隱性影響】偵測到本靴和局後高機率開莊，莊家權重隱性 +15 分。`;
+            } else if (pAfterTie > bAfterTie) {
+                pScore += 15;
+                tieInfluenceText += `\n👻【和局隱性影響】偵測到本靴和局後高機率開閒，閒家權重隱性 +15 分。`;
+            } else {
+                bScore *= 0.9; pScore *= 0.9;
+                tieInfluenceText += `\n👻【和局隱性影響】和局後無明顯慣性，打亂原有趨勢，AI 削弱雙方 10% 權重啟動防禦。`;
+            }
+        }
+
+        // 3. 密集和局干擾防禦
+        let recent10 = history.slice(-10);
+        let tieCountRecent10 = recent10.filter(x => x === 'T').length;
+        if (tieCountRecent10 >= 2 && !tieRecent) {
+            bScore *= 0.85; pScore *= 0.85;
+            tieInfluenceText += `\n⚠️【和局干擾發酵】近期出現 ${tieCountRecent10} 次和局，AI 強制削弱整體 15% 基礎權重以拉高防禦閾值。`;
+        } else if (tieCountRecent10 >= 2 && tieRecent) {
+            bScore *= 0.85; pScore *= 0.85;
+            tieInfluenceText += `\n⚠️ 且近期和局頻繁 (近10局出現 ${tieCountRecent10} 次)，整體權重強制削弱 15% 以規避高風險絞殺。`;
+        }
+        // ==========================================
         
-        bScore *= 1.03; 
+        bScore *= 1.03; // 莊家優勢常數
         let vol = evaluateVolatility(pure);
         let totalScore = bScore + pScore;
         let bProb = totalScore > 0 ? ((bScore / totalScore) * 100).toFixed(1) : 50;
         let pProb = totalScore > 0 ? ((pScore / totalScore) * 100).toFixed(1) : 50;
 
         if (vol.isChoppy && !hasResonance && valid < 3) {
-            return { target: 'NEUTRAL', reasonCode: 'HIGH_VOLATILITY', bScore, pScore, bProb, pProb, volText: `【嚴格空倉】近15局出現 ${vol.chops} 次轉向。無三路共振絞殺盤，防禦保護本金。` };
+            return { target: 'NEUTRAL', reasonCode: 'HIGH_VOLATILITY', bScore, pScore, bProb, pProb, volText: `【嚴格空倉】近15局出現 ${vol.chops} 次轉向。無三路共振絞殺盤，防禦保護本金。`, tieInfluenceText };
         }
         if (valid < 2) {
-            return { target: 'NEUTRAL', reasonCode: 'NOT_ENOUGH_CORES', bScore, pScore, bProb, pProb, valid };
+            return { target: 'NEUTRAL', reasonCode: 'NOT_ENOUGH_CORES', bScore, pScore, bProb, pProb, valid, tieInfluenceText };
         }
         if (Math.abs(bScore - pScore) < 35) {
-            return { target: 'NEUTRAL', reasonCode: 'DEFENSE_PROBABILITY', bScore, pScore, bProb, pProb, valid };
+            return { target: 'NEUTRAL', reasonCode: 'DEFENSE_PROBABILITY', bScore, pScore, bProb, pProb, valid, tieInfluenceText };
         }
         
         let target = bScore > pScore ? 'B' : 'P';
@@ -601,7 +645,7 @@
         if (hasResonance && target === resTarget) conf = Math.max(92, conf);
         if (cores[0].confidence >= 95) conf = Math.max(90, conf);
         
-        return { target, confidence: conf, bScore, pScore, bProb, pProb, valid, hasResonance };
+        return { target, confidence: conf, bScore, pScore, bProb, pProb, valid, hasResonance, tieInfluenceText };
     }
 
     function updateUI() {
@@ -806,9 +850,15 @@
             ft.innerText = f.reasonCode === 'HIGH_VOLATILITY' ? "觀望 (高頻絞殺)" : (f.reasonCode === 'NOT_ENOUGH_CORES' ? "觀望 (訊號薄弱)" : "觀望 (分數衝突)");
             ft.className = "final-target target-N";
             fp.innerText = `AI 預測佔比: 莊 ${f.bProb}% | 閒 ${f.pProb}%`;
-            if (f.reasonCode === 'HIGH_VOLATILITY') fr.innerText = f.volText;
-            else if (f.reasonCode === 'NOT_ENOUGH_CORES') fr.innerText = `目前僅觸發 ${f.valid} 個有效核心，未達最低 2 個核心的安全門檻，啟動防禦機制。`;
-            else fr.innerText = `原始權重：莊 (${f.bScore.toFixed(1)}) vs 閒 (${f.pScore.toFixed(1)})。\n核心訊號衝突且差距極小，防禦機制攔截。`;
+            
+            let defendReason = "";
+            if (f.reasonCode === 'HIGH_VOLATILITY') defendReason = f.volText;
+            else if (f.reasonCode === 'NOT_ENOUGH_CORES') defendReason = `目前僅觸發 ${f.valid} 個有效核心，未達最低 2 個核心的安全門檻，啟動防禦機制。`;
+            else defendReason = `原始權重：莊 (${f.bScore.toFixed(1)}) vs 閒 (${f.pScore.toFixed(1)})。\n核心訊號衝突且差距極小，防禦機制攔截。`;
+            
+            // 補上隱性影響文字
+            if (f.tieInfluenceText) defendReason += f.tieInfluenceText;
+            fr.innerText = defendReason;
             fb.innerHTML = `<div class="bet-advice wait">嚴格空倉防禦</div>`;
             pbContainer.style.display = "none";
         } else {
@@ -817,9 +867,14 @@
             fp.innerText = `綜合可信度 ${f.confidence}%`;
             
             let reasonText = `${f.hasResonance ? "🔥 三路共振爆發！\n" : ""}原始權重：莊 ${f.bScore.toFixed(1)} vs 閒 ${f.pScore.toFixed(1)}。成功觸發 ${f.valid} 個核心！`;
+            
+            // 加入打房防禦文字
             if (isReverseCurrent) reasonText += `\n⚠️【反打房防禦啟動】近5局命中低於3次，系統已強制將原預測反轉！`;
             else if (roomState === "NORMAL") reasonText += `\n✅【正打房狀態維持】近期命中率達標，按常規分析邏輯預測。`;
             
+            // 加入隱性影響文字
+            if (f.tieInfluenceText) reasonText += f.tieInfluenceText;
+
             fr.innerText = reasonText;
             fb.innerHTML = `<div class="bet-advice">建議注碼：${f.hasResonance || f.confidence >= 90 ? "3 單位 (強力訊號)" : "1-2 單位 (平注)"}</div>`;
             pbContainer.style.display = "flex";
