@@ -144,7 +144,7 @@
 
 <header>
     <h1>百家樂多維路單分析與旗艦預測系統</h1>
-    <p aria-live="polite">終極神級精算版 • 置頂和局模擬 / AI 隱性和局干擾分析 / 全局動態正反打防禦</p>
+    <p aria-live="polite">終極神級精算版 • 大數底盤機率融合 / AI 隱性干擾分析 / 全局動態防禦</p>
 </header>
 
 <div class="panel-container">
@@ -618,11 +618,21 @@
             tieInfluenceText += `\n⚠️ 且近期和局頻繁 (近10局出現 ${tieCountRecent10} 次)，整體權重強制削弱 15% 以規避高風險絞殺。`;
         }
 
-        bScore *= 1.03; 
+        // ==========================================
+        // 新增：百家樂基本數學勝率基準融入
+        // ==========================================
+        // 基本優勝概率: 莊 45.8%, 閒 44.6%, 和 9.6%
+        // 去除和局影響後之基準: 莊 51.0%, 閒 49.0%
+        let baseB = 51.0;
+        let baseP = 49.0;
+        // 賦予基礎概率 100 分的初始底盤權重
+        bScore += baseB;
+        pScore += baseP;
+
         let vol = evaluateVolatility(pure);
         let totalScore = bScore + pScore;
-        let bProb = totalScore > 0 ? ((bScore / totalScore) * 100).toFixed(1) : 50;
-        let pProb = totalScore > 0 ? ((pScore / totalScore) * 100).toFixed(1) : 50;
+        let bProb = totalScore > 0 ? ((bScore / totalScore) * 100).toFixed(1) : 51.0;
+        let pProb = totalScore > 0 ? ((pScore / totalScore) * 100).toFixed(1) : 49.0;
 
         if (vol.isChoppy && !hasResonance && valid < 3) {
             return { target: 'NEUTRAL', reasonCode: 'HIGH_VOLATILITY', bScore, pScore, bProb, pProb, volText: `【嚴格空倉】近15局出現 ${vol.chops} 次轉向。無三路共振絞殺盤，防禦保護本金。`, tieInfluenceText };
@@ -635,7 +645,11 @@
         }
         
         let target = bScore > pScore ? 'B' : 'P';
-        let conf = ((bScore > pScore ? bScore : pScore) / (bScore > pScore ? bWeight : pWeight) * 0.6 + 40).toFixed(1);
+        let activeScore = bScore > pScore ? (bScore - baseB) : (pScore - baseP); 
+        let activeWeight = bScore > pScore ? bWeight : pWeight;
+        let conf = activeWeight > 0 ? ((activeScore / activeWeight) * 0.6 + 40).toFixed(1) : 50.0;
+        if (conf > 98) conf = 98.0;
+
         if (hasResonance && target === resTarget) conf = Math.max(92, conf);
         if (cores[0].confidence >= 95) conf = Math.max(90, conf);
         
@@ -873,7 +887,7 @@
             let defendReason = "";
             if (f.reasonCode === 'HIGH_VOLATILITY') defendReason = f.volText;
             else if (f.reasonCode === 'NOT_ENOUGH_CORES') defendReason = `目前僅觸發 ${f.valid} 個有效核心，未達最低 2 個核心的安全門檻，啟動核心防禦。`;
-            else defendReason = `原始權重：莊 (${f.bScore.toFixed(1)}) vs 閒 (${f.pScore.toFixed(1)})。\n核心訊號衝突且差距極小，防禦機制攔截。`;
+            else defendReason = `📊 已整合百家樂基礎概率 (莊51%/閒49%)。\n融合後權重：莊 (${f.bScore.toFixed(1)}) vs 閒 (${f.pScore.toFixed(1)})。\n核心訊號衝突且差距極小，防禦機制攔截。`;
             
             if (f.tieInfluenceText) defendReason += f.tieInfluenceText;
             fr.innerText = defendReason;
@@ -884,7 +898,8 @@
             ft.className = `final-target target-${f.target}`;
             fp.innerText = `綜合可信度 ${f.confidence}%`;
             
-            let reasonText = `${f.hasResonance ? "🔥 三路共振爆發！\n" : ""}原始權重：莊 ${f.bScore.toFixed(1)} vs 閒 ${f.pScore.toFixed(1)}。成功觸發 ${f.valid} 個核心！`;
+            let reasonText = `📊【大數底盤基準】百家樂天生概率 (莊45.8%/閒44.6%/和9.6%)，去和局基準為 莊51% / 閒49%。\n`;
+            reasonText += `${f.hasResonance ? "🔥 三路共振爆發！\n" : ""}🧠【AI 盤路權重疊加】融合後總分：莊 ${f.bScore.toFixed(1)} vs 閒 ${f.pScore.toFixed(1)}。成功觸發 ${f.valid} 個核心！`;
             
             if (roomState === "REVERSE") reasonText += `\n⚠️【反打房防禦啟動】累積反打勝率達 ${currentReverseWinRate}%，系統已強制將原預測反轉！`;
             else if (roomState === "NORMAL") reasonText += `\n✅【正打房狀態維持】累積正打勝率達 ${currentNormalWinRate}%，按常規分析邏輯預測。`;
