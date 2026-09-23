@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>百家樂多維路單旗艦預測系統 - 4大核心12邏輯反打引擎</title>
+    <title>百家樂多維路單旗艦預測系統 - 完整防禦與戰績追蹤引擎</title>
     <style>
         :root {
             --bg-color: #0b0f19;
@@ -30,9 +30,9 @@
 
         .panel-container { background-color: var(--card-bg); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); }
 
-        /* 頂端盈虧統計 */
-        .top-net-stats { display: flex; justify-content: space-around; background: rgba(0,0,0,0.4); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 4px; flex-wrap: wrap; gap: 10px; }
-        .net-stat-item { display: flex; flex-direction: column; align-items: center; font-size: 0.85rem; color: var(--text-muted); }
+        /* 頂端盈虧統計與防禦狀態 */
+        .top-net-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 4px; }
+        .net-stat-item { display: flex; flex-direction: column; align-items: center; font-size: 0.85rem; color: var(--text-muted); text-align: center; }
         .net-stat-val { font-size: 1.3rem; font-weight: bold; color: var(--text-color); margin-top: 2px; }
 
         /* 路單展示區 */
@@ -43,14 +43,20 @@
         .hud-p { color: var(--player-color); }
         .hud-t { color: var(--tie-color); }
 
-        .history-list { display: grid; grid-template-rows: repeat(6, auto); grid-auto-flow: column; grid-auto-columns: minmax(36px, auto); gap: 4px; min-height: 100px; overflow-x: auto; align-content: start; padding-bottom: 6px; }
-        .badge-box { display: flex; align-items: center; justify-content: center; border-radius: 50%; color: white; font-size: 0.8rem; font-weight: bold; width: 36px; height: 36px; min-width: 36px; position: relative; }
+        /* 珠盤路與預測結果標籤 */
+        .history-list { display: grid; grid-template-rows: repeat(6, auto); grid-auto-flow: column; grid-auto-columns: minmax(42px, auto); gap: 6px; min-height: 120px; overflow-x: auto; align-content: start; padding-bottom: 6px; }
+        .bead-item-wrapper { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .badge-box { display: flex; align-items: center; justify-content: center; border-radius: 50%; color: white; font-size: 0.8rem; font-weight: bold; width: 34px; height: 34px; min-width: 34px; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
         .badge-box-B { background: radial-gradient(circle at 30% 30%, #f87171, var(--banker-color)); }
         .badge-box-P { background: radial-gradient(circle at 30% 30%, #60a5fa, var(--player-color)); }
         .badge-box-T { background: radial-gradient(circle at 30% 30%, #4ade80, var(--tie-color)); }
+        .pred-tag { font-size: 0.65rem; font-weight: bold; padding: 1px 4px; border-radius: 3px; background: rgba(0,0,0,0.6); }
+        .tag-hit { color: var(--win-color); border: 1px solid var(--win-color); }
+        .tag-miss { color: var(--loss-color); border: 1px solid var(--loss-color); }
+        .tag-skip { color: var(--text-muted); border: 1px solid var(--border-color); }
 
         /* 下三路矩陣 */
-        .down-roads-wrapper { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+        .down-roads-wrapper { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
         .down-road-row { display: flex; align-items: flex-start; gap: 10px; background: rgba(255, 255, 255, 0.015); padding: 6px 10px; border-radius: 6px; }
         .down-road-label { font-size: 0.8rem; color: var(--text-muted); min-width: 65px; margin-top: 2px; font-weight: bold; }
         .down-road-matrix { display: flex; gap: 1px; overflow-x: auto; flex: 1; align-items: flex-start; height: 84px; }
@@ -87,13 +93,23 @@
         @media (max-width: 880px) { .dashboard { grid-template-columns: 1fr; } }
         
         .left-col { display: flex; flex-direction: column; gap: 16px; }
-        .final-card { background-color: var(--card-bg); border: 2px solid var(--accent-gold); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative; }
-        .final-title { font-size: 1rem; color: var(--text-muted); margin-bottom: 8px; font-weight: bold; }
-        .final-target { font-size: 1.8rem; font-weight: 800; margin-bottom: 6px; }
+        .final-card { background-color: var(--card-bg); border: 2px solid var(--accent-gold); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative; }
+        .final-title { font-size: 1rem; color: var(--text-muted); margin-bottom: 6px; font-weight: bold; }
+        .final-target { font-size: 1.7rem; font-weight: 800; margin-bottom: 6px; }
         .target-B { color: var(--banker-color); }
         .target-P { color: var(--player-color); }
         .target-N { color: var(--text-muted); }
-        .confidence-box { font-size: 1.1rem; color: var(--text-color); font-weight: bold; margin-bottom: 10px; }
+        .confidence-box { font-size: 1rem; color: var(--text-color); font-weight: bold; margin-bottom: 8px; }
+
+        /* 防禦機制與動態標籤 */
+        .defense-banner { font-size: 0.8rem; font-weight: bold; padding: 6px 12px; border-radius: 6px; width: 100%; margin-bottom: 8px; text-align: center; }
+        .def-safe { background: rgba(16, 185, 129, 0.15); color: var(--win-color); border: 1px solid var(--win-color); }
+        .def-warn { background: rgba(245, 158, 11, 0.15); color: var(--accent-gold); border: 1px solid var(--accent-gold); }
+        .def-danger { background: rgba(244, 63, 94, 0.15); color: var(--loss-color); border: 1px solid var(--loss-color); }
+
+        .weight-percent-bar { display: flex; width: 100%; background: rgba(0,0,0,0.3); border-radius: 6px; overflow: hidden; height: 18px; margin: 8px 0; border: 1px solid var(--border-color); font-size: 0.75rem; font-weight: bold; line-height: 18px; }
+        .bar-b { background: var(--banker-color); color: white; text-align: center; transition: width 0.3s; }
+        .bar-p { background: var(--player-color); color: white; text-align: center; transition: width 0.3s; }
 
         /* 4大核心分析卡片區 */
         .analysis-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
@@ -128,7 +144,7 @@
         .betting-title { font-size: 0.9rem; color: var(--accent-gold); font-weight: bold; margin-bottom: 10px; border-bottom: 1px dashed var(--border-color); padding-bottom: 6px; }
         .betting-grid { display: flex; gap: 10px; justify-content: space-around; }
         .bet-card { flex: 1; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; }
-        .bet-val { font-size: 1.2rem; font-weight: bold; color: var(--win-color); margin-top: 4px; }
+        .bet-val { font-size: 1.1rem; font-weight: bold; color: var(--win-color); margin-top: 4px; }
 
         .stats-panel-bottom { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 10px; text-align: center; }
@@ -142,7 +158,7 @@
 
     <header>
         <h1>百家樂多維路單旗艦預測系統</h1>
-        <p>4大獨立核心 (大路/下三路) • 12大邏輯對抗 • 極限臨界點破路反打機制</p>
+        <p>4大獨立核心 • 12大邏輯對抗 • 防禦機制與戰績追蹤引擎</p>
     </header>
 
     <div class="panel-container">
@@ -155,11 +171,15 @@
                 <span>斐波那契策略 (淨盈虧)</span>
                 <span id="netFibVal" class="net-stat-val">0 單位</span>
             </div>
+            <div class="net-stat-item">
+                <span>和局頻率干擾率</span>
+                <span id="tieImpactVal" class="net-stat-val" style="color:var(--tie-color);">0.0%</span>
+            </div>
         </div>
 
         <div class="history-container">
             <div class="history-title">
-                <span>實時路單面板</span>
+                <span>實時路單與歷史預測標記</span>
                 <span id="handCounter" style="color:var(--accent-gold); font-weight:bold;">總局數: 0/100</span>
             </div>
             <div class="hud-stats-bar">
@@ -168,7 +188,7 @@
                 <span>和 (T): <strong id="cntT" class="hud-t">0</strong></span>
             </div>
 
-            <div style="font-size:0.75rem; color:var(--text-muted);">珠盤路 (歷史開牌紀錄)</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">珠盤路 (含每一局 AI 預測命中狀況)</div>
             <div id="beadPlate" class="history-list"></div>
 
             <div class="down-roads-wrapper">
@@ -214,8 +234,17 @@
         <div class="left-col">
             <div class="final-card">
                 <div class="final-title">AI 終極整合預測</div>
+                <div id="defenseBanner" class="defense-banner def-safe">🛡️ 防禦機制：🟢 低風險環境</div>
                 <div id="finalTarget" class="final-target target-N">觀望 (數據累積中)</div>
                 <div id="finalConfidence" class="confidence-box">綜合置信度: --%</div>
+                
+                <!-- 莊閒權重百分比條 -->
+                <div class="weight-percent-bar">
+                    <div id="barB" class="bar-b" style="width: 50%;">莊 50%</div>
+                    <div id="barP" class="bar-p" style="width: 50%;">閒 50%</div>
+                </div>
+                
+                <div id="signalBadge" style="font-size:0.85rem; font-weight:bold; color:var(--accent-gold); margin-bottom:6px;">訊號等級: ⏸️ 中立觀望</div>
                 <div id="finalReason" style="font-size:0.8rem; color:var(--text-muted); line-height:1.4;">需要至少 5 局有效數據啟動分析引擎。</div>
             </div>
 
@@ -239,7 +268,7 @@
     </div>
 
     <div class="stats-panel-bottom">
-        <div style="text-align:center; font-weight:bold; color:var(--accent-gold);">預測戰績實時統計</div>
+        <div style="text-align:center; font-weight:bold; color:var(--accent-gold);">預測戰績實時數據統計</div>
         <div class="stats-grid">
             <div class="stat-card">
                 <div style="font-size:0.75rem; color:var(--text-muted);">預測勝率</div>
@@ -269,11 +298,14 @@
     </div>
 
 <script>
-    // 數據狀態
+    // 全局狀態管理
     let rawHistory = [];
     const MAX_HANDS = 100;
+    const BANKER_INHERENT_EDGE = 0.15; // 莊家天生勝率優勢加權
 
-    // 歷史紀錄管理
+    // 斐波那契數列定義
+    const FIB_SEQ = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55];
+
     function recordResult(res) {
         if (rawHistory.length >= MAX_HANDS) return alert(`已達 ${MAX_HANDS} 局上限`);
         rawHistory.push(res);
@@ -312,7 +344,7 @@
         updateSystem();
     }
 
-    // 核心資料轉換：建構大路矩陣與下三路序列
+    // 基礎數據轉換
     function getPureHistory(arr) {
         return arr.filter(x => x === 'B' || x === 'P');
     }
@@ -333,7 +365,6 @@
         return cols;
     }
 
-    // 生成下三路 (offset: 1=大眼仔, 2=小路, 3=曱甴路)
     function getDerivedRoadSequence(pureArr, offset) {
         let cols = buildLogicalCols(pureArr);
         let seq = [];
@@ -361,19 +392,12 @@
 
     /*
       ========================================================
-      12大核心邏輯分析引擎 & 階級臨界點反打機制
+      12大核心邏輯分析引擎 & 臨界點破路機制
       ========================================================
     */
-    const LOGIC_NAMES = [
-        "單跳", "雙跳", "龍", "房廳", "逢跳連", 
-        "3-2補齊", "3-3反打", "3-3-2補齊", "2-3反打", 
-        "3-3-3反打", "1-3-1反打", "3-1-3反打"
-    ];
-
     function evaluateCoreRoad(seq, isBigRoad) {
-        // seq 可能是 ['B','P','B'...] (大路) 或 ['RED','BLUE'...] (下三路)
         if (!seq || seq.length < 3) {
-            return { target: 'N', weight: 0, status: 'none', statusText: '數據不足', triggeredLogics: [] };
+            return { target: 'N', weight: 0, statusClass: 'status-none', statusText: '數據不足', triggeredLogics: [] };
         }
 
         let cols = buildLogicalCols(seq);
@@ -385,12 +409,10 @@
         let triggeredLogics = [];
         let voteMap = { 'B': 0, 'P': 0, 'RED': 0, 'BLUE': 0 };
 
-        // 幫忙把結果轉換為大路 B/P 投票
         function castVote(targetVal, weight) {
             if (isBigRoad) {
                 if (targetVal === 'B' || targetVal === 'P') voteMap[targetVal] += weight;
             } else {
-                // 下三路的 RED 代表「順著大路規律/連」, BLUE 代表「跳/轉變」
                 if (targetVal === 'RED' || targetVal === 'BLUE') voteMap[targetVal] += weight;
             }
         }
@@ -405,24 +427,14 @@
             else break;
         }
         if (singleJumpCount >= 2) {
-            let tier = '短';
-            let pct = 30;
-            let weight = 1.2;
+            let tier = '短'; let pct = 30; let weight = 1.2;
             let normalTarget = oppositeVal;
-
-            if (singleJumpCount >= 4 && singleJumpCount <= 5) {
-                tier = '中'; pct = 70; weight = 2.0;
-            } else if (singleJumpCount >= 6) {
-                tier = '長'; pct = 100; weight = 3.5; // 長階級直達極限危險點
-            }
+            if (singleJumpCount >= 4 && singleJumpCount <= 5) { tier = '中'; pct = 70; weight = 2.0; }
+            else if (singleJumpCount >= 6) { tier = '長'; pct = 100; weight = 3.5; }
 
             let isCounter = (tier === '長' || pct >= 100);
             let finalTarget = isCounter ? (isBigRoad ? lastVal : (lastVal === 'RED'?'BLUE':'RED')) : normalTarget;
-
-            triggeredLogics.push({
-                name: '單跳', tier, pct, weight, isCounter,
-                desc: `連續 ${singleJumpCount} 次單跳 (${tier}階 - ${pct}%)`
-            });
+            triggeredLogics.push({ name: '單跳', tier, pct, weight, isCounter, desc: `連續 ${singleJumpCount} 次單跳 (${tier}階 - ${pct}%)` });
             castVote(finalTarget, weight);
         }
 
@@ -435,64 +447,49 @@
         if (doubleJumpCount >= 2) {
             let tier = '短'; let pct = 35; let weight = 1.3;
             let normalTarget = (curLen === 1) ? lastVal : oppositeVal;
-
             if (doubleJumpCount === 3) { tier = '中'; pct = 75; weight = 2.2; }
             else if (doubleJumpCount >= 4) { tier = '長'; pct = 100; weight = 3.8; }
 
             let isCounter = (tier === '長' || pct >= 100);
             let finalTarget = isCounter ? (normalTarget === 'B'?'P':(normalTarget==='P'?'B':(normalTarget==='RED'?'BLUE':'RED'))) : normalTarget;
-
-            triggeredLogics.push({
-                name: '雙跳', tier, pct, weight, isCounter,
-                desc: `連續 ${doubleJumpCount} 組雙跳 (${tier}階 - ${pct}%)`
-            });
+            triggeredLogics.push({ name: '雙跳', tier, pct, weight, isCounter, desc: `連續 ${doubleJumpCount} 組雙跳 (${tier}階 - ${pct}%)` });
             castVote(finalTarget, weight);
         }
 
         // 3. 龍 (長龍) 邏輯
         if (curLen >= 4) {
             let tier = '短'; let pct = 40; let weight = 1.5;
-            let normalTarget = lastVal; // 順龍
-
+            let normalTarget = lastVal;
             if (curLen >= 6 && curLen <= 7) { tier = '中'; pct = 80; weight = 2.5; }
-            else if (curLen >= 8) { tier = '長'; pct = 100; weight = 4.0; } // 極限砍龍點
+            else if (curLen >= 8) { tier = '長'; pct = 100; weight = 4.0; }
 
             let isCounter = (tier === '長' || pct >= 100);
             let finalTarget = isCounter ? oppositeVal : normalTarget;
-
-            triggeredLogics.push({
-                name: '龍', tier, pct, weight, isCounter,
-                desc: `長龍高達 ${curLen} 連霸 (${tier}階 - ${pct}%)`
-            });
+            triggeredLogics.push({ name: '龍', tier, pct, weight, isCounter, desc: `長龍高達 ${curLen} 連霸 (${tier}階 - ${pct}%)` });
             castVote(finalTarget, weight);
         }
 
-        // 4. 房廳 (Pattern: 3-1-3-1 或 2-1-2-1)
+        // 4. 房廳
         if (nCols >= 4) {
             let p1 = lens[nCols - 4], p2 = lens[nCols - 3], p3 = lens[nCols - 2], p4 = lens[nCols - 1];
             if (p1 === p3 && p2 === p4 && p1 !== p2) {
                 let tier = '短'; let pct = 40; let weight = 1.4;
                 let normalTarget = (curLen < p1) ? lastVal : oppositeVal;
-
                 if (nCols >= 6 && lens[nCols - 6] === p1) { tier = '中'; pct = 75; weight = 2.4; }
                 if (nCols >= 8 && lens[nCols - 8] === p1) { tier = '長'; pct = 100; weight = 3.6; }
 
                 let isCounter = (tier === '長' || pct >= 100);
                 let finalTarget = isCounter ? (normalTarget === 'B'?'P':(normalTarget==='P'?'B':(normalTarget==='RED'?'BLUE':'RED'))) : normalTarget;
-
-                triggeredLogics.push({
-                    name: '房廳', tier, pct, weight, isCounter,
-                    desc: `形成房廳走勢 ${p1}-${p2} (${tier}階 - ${pct}%)`
-                });
+                triggeredLogics.push({ name: '房廳', tier, pct, weight, isCounter, desc: `形成房廳走勢 ${p1}-${p2} (${tier}階 - ${pct}%)` });
                 castVote(finalTarget, weight);
             }
         }
 
-        // 5. 逢跳連 (跳完立刻連)
+        // 5. 逢跳連
         if (nCols >= 3 && lens[nCols - 2] === 1 && curLen === 1) {
             let weight = 1.3;
             triggeredLogics.push({ name: '逢跳連', tier: '中', pct: 60, weight, isCounter: false, desc: '觸發逢跳連特徵' });
-            castVote(lastVal, weight); // 預測補連 (同一顏色)
+            castVote(lastVal, weight);
         }
 
         // 6. 3-2補齊
@@ -512,21 +509,21 @@
         // 8. 3-3-2補齊
         if (nCols >= 3 && lens[nCols - 3] === 3 && lens[nCols - 2] === 3 && curLen === 2) {
             let weight = 1.6;
-            triggeredLogics.push({ name: '3-3-2補齊', tier: '中', pct: 65, weight, isCounter: false, desc: '3-3-2結構，預測補齊3-3-3' });
+            triggeredLogics.push({ name: '3-3-2補齊', tier: '中', pct: 65, weight, isCounter: false, desc: '3-3-2結構，預測補齊' });
             castVote(lastVal, weight);
         }
 
         // 9. 2-3反打
         if (nCols >= 2 && lens[nCols - 2] === 2 && curLen === 3) {
             let weight = 1.7;
-            triggeredLogics.push({ name: '2-3反打', tier: '中', pct: 80, weight, isCounter: true, desc: '2-3滿格，觸發反打換路' });
+            triggeredLogics.push({ name: '2-3反打', tier: '中', pct: 80, weight, isCounter: true, desc: '2-3滿格，觸發反打' });
             castVote(oppositeVal, weight);
         }
 
         // 10. 3-3-3反打
         if (nCols >= 3 && lens[nCols - 3] === 3 && lens[nCols - 2] === 3 && curLen === 3) {
             let weight = 2.2;
-            triggeredLogics.push({ name: '3-3-3反打', tier: '長', pct: 100, weight, isCounter: true, desc: '3-3-3三頂峰滿格，強制破路反打' });
+            triggeredLogics.push({ name: '3-3-3反打', tier: '長', pct: 100, weight, isCounter: true, desc: '3-3-3頂峰滿格，反打' });
             castVote(oppositeVal, weight);
         }
 
@@ -540,11 +537,10 @@
         // 12. 3-1-3反打
         if (nCols >= 3 && lens[nCols - 3] === 3 && lens[nCols - 2] === 1 && curLen === 3) {
             let weight = 1.9;
-            triggeredLogics.push({ name: '3-1-3反打', tier: '中', pct: 85, weight, isCounter: true, desc: '3-1-3滿格，觸發破路反打' });
+            triggeredLogics.push({ name: '3-1-3反打', tier: '中', pct: 85, weight, isCounter: true, desc: '3-1-3滿格，反打' });
             castVote(oppositeVal, weight);
         }
 
-        // 判定該核心最終結果 (權重勝出機制)
         let keyA = isBigRoad ? 'B' : 'RED';
         let keyB = isBigRoad ? 'P' : 'BLUE';
         let wA = voteMap[keyA] || 0;
@@ -554,17 +550,8 @@
         let maxWeight = 0;
         let isCounterTriggered = triggeredLogics.some(l => l.isCounter);
 
-        if (wA > wB) {
-            finalTarget = keyA;
-            maxWeight = wA;
-        } else if (wB > wA) {
-            finalTarget = keyB;
-            maxWeight = wB;
-        } else {
-            // 相同權重不作分析 / 觀望
-            finalTarget = 'N';
-            maxWeight = 0;
-        }
+        if (wA > wB) { finalTarget = keyA; maxWeight = wA; }
+        else if (wB > wA) { finalTarget = keyB; maxWeight = wB; }
 
         let statusText = '正常順勢';
         let statusClass = 'status-normal';
@@ -577,39 +564,28 @@
             statusClass = 'status-counter';
         }
 
-        return {
-            target: finalTarget,
-            weight: maxWeight,
-            statusClass,
-            statusText,
-            triggeredLogics
-        };
+        return { target: finalTarget, weight: maxWeight, statusClass, statusText, triggeredLogics };
     }
 
-    // 整合 4 大獨立核心並映射回大路預測
-    function analyzeAllCores() {
-        let pure = getPureHistory(rawHistory);
+    // 4大核心導出並映射至大路 (帶天生莊勝優勢)
+    function analyzeCoresForDataset(historyArray) {
+        let pure = getPureHistory(historyArray);
         let bigRoadSeq = pure;
         let bigEyeSeq = getDerivedRoadSequence(pure, 1);
         let smallSeq = getDerivedRoadSequence(pure, 2);
         let roachSeq = getDerivedRoadSequence(pure, 3);
 
-        let c1 = evaluateCoreRoad(bigRoadSeq, true);  // 大路
-        let c2 = evaluateCoreRoad(bigEyeSeq, false);  // 大眼仔路
-        let c3 = evaluateCoreRoad(smallSeq, false);   // 小路
-        let c4 = evaluateCoreRoad(roachSeq, false);   // 曱甴路
+        let c1 = evaluateCoreRoad(bigRoadSeq, true);
+        let c2 = evaluateCoreRoad(bigEyeSeq, false);
+        let c3 = evaluateCoreRoad(smallSeq, false);
+        let c4 = evaluateCoreRoad(roachSeq, false);
 
-        // 下三路預測目標 (RED/BLUE) 轉化為對大路 (B/P) 的預測
         function mapDerivedToBigRoad(derivedRes, roadOffset) {
             if (derivedRes.target === 'N' || pure.length === 0) return { target: 'N', weight: 0 };
-            
-            // 模擬下一局開 B 與開 P，看哪一個會產生對應的 RED/BLUE
             let simB = pure.concat(['B']);
             let simP = pure.concat(['P']);
-            
             let seqB = getDerivedRoadSequence(simB, roadOffset);
             let seqP = getDerivedRoadSequence(simP, roadOffset);
-
             let nextColorIfB = seqB[seqB.length - 1];
             let nextColorIfP = seqP[seqP.length - 1];
 
@@ -632,19 +608,194 @@
             { name: "曱甴路核心", res: c4, mapped: m4 }
         ];
 
-        return cores;
+        // 莊閒總權重計算 (注入莊家天生勝率優勢 offset)
+        let totalWeightB = BANKER_INHERENT_EDGE;
+        let totalWeightP = 0;
+
+        cores.forEach(c => {
+            if (c.mapped.target === 'B') totalWeightB += c.mapped.weight;
+            if (c.mapped.target === 'P') totalWeightP += c.mapped.weight;
+        });
+
+        // 和局率與風險評估
+        let cntT = historyArray.filter(x => x === 'T').length;
+        let tieRatio = historyArray.length > 0 ? (cntT / historyArray.length) : 0;
+        let counterTriggersCount = cores.reduce((acc, c) => acc + (c.res.statusClass === 'status-counter' ? 1 : 0), 0);
+        let isWeightConflict = Math.abs(totalWeightB - totalWeightP) < 0.6 && (totalWeightB + totalWeightP > 1);
+
+        let riskLevel = 'SAFE'; // SAFE, WARN, DANGER
+        if (pure.length < 5) riskLevel = 'WARN';
+        else if (counterTriggersCount >= 2 || tieRatio > 0.15 || isWeightConflict) riskLevel = 'DANGER';
+        else if (tieRatio > 0.10) riskLevel = 'WARN';
+
+        let finalTarget = 'N';
+        let weightDiff = Math.abs(totalWeightB - totalWeightP);
+
+        if (riskLevel !== 'DANGER' && weightDiff >= 0.8) {
+            finalTarget = totalWeightB > totalWeightP ? 'B' : 'P';
+        }
+
+        return { cores, totalWeightB, totalWeightP, riskLevel, tieRatio, finalTarget, weightDiff };
     }
 
     /*
       ========================================================
-      UI 渲染與主控邏輯
+      主控系統更新與戰績實時計算
       ========================================================
     */
     function updateSystem() {
-        renderRoads();
-        let cores = analyzeAllCores();
-        renderCoreCards(cores);
-        calculateFinalDecision(cores);
+        // 1. 歷史數據預測追蹤計算 (從第 0 局累計至今)
+        let predHistoryHits = []; // 'HIT', 'MISS', 'SKIP'
+        let winCount = 0, lossCount = 0, skipCount = 0;
+        let netSignalUnits = 0;
+        let netFibUnits = 0;
+        let fibIndex = 0;
+
+        for (let i = 0; i < rawHistory.length; i++) {
+            let slice = rawHistory.slice(0, i);
+            let actual = rawHistory[i];
+
+            if (i < 5) {
+                predHistoryHits.push('SKIP');
+                skipCount++;
+                continue;
+            }
+
+            let analysis = analyzeCoresForDataset(slice);
+            let pred = analysis.finalTarget;
+
+            if (actual === 'T') {
+                predHistoryHits.push('SKIP'); // 和局退回，不計輸贏
+            } else if (pred === 'N') {
+                predHistoryHits.push('SKIP');
+                skipCount++;
+            } else if (pred === actual) {
+                predHistoryHits.push('HIT');
+                winCount++;
+                
+                // 訊號強弱注碼
+                let sigUnit = analysis.weightDiff >= 3.0 ? 3 : (analysis.weightDiff >= 1.8 ? 2 : 1);
+                netSignalUnits += sigUnit * (actual === 'B' ? 0.95 : 1.0); // 莊抽水 5%
+
+                // 斐波那契注碼
+                let fibUnit = FIB_SEQ[fibIndex];
+                netFibUnits += fibUnit * (actual === 'B' ? 0.95 : 1.0);
+                fibIndex = Math.max(0, fibIndex - 2); // 贏退2格
+            } else {
+                predHistoryHits.push('MISS');
+                lossCount++;
+
+                let sigUnit = analysis.weightDiff >= 3.0 ? 3 : (analysis.weightDiff >= 1.8 ? 2 : 1);
+                netSignalUnits -= sigUnit;
+
+                let fibUnit = FIB_SEQ[fibIndex];
+                netFibUnits -= fibUnit;
+                fibIndex = Math.min(FIB_SEQ.length - 1, fibIndex + 1); // 輸進1格
+            }
+        }
+
+        // 2. 更新頂端與底端戰績統計
+        let totalBets = winCount + lossCount;
+        let winRate = totalBets > 0 ? ((winCount / totalBets) * 100).toFixed(1) : "0.0";
+
+        document.getElementById('statWinRate').innerText = `${winRate}%`;
+        document.getElementById('statTotalBets').innerText = totalBets;
+        document.getElementById('statWinCount').innerText = winCount;
+        document.getElementById('statLossCount').innerText = lossCount;
+        document.getElementById('statSkipCount').innerText = skipCount;
+
+        document.getElementById('netSignalVal').innerText = `${netSignalUnits >= 0 ? '+' : ''}${netSignalUnits.toFixed(2)} 單位`;
+        document.getElementById('netSignalVal').style.color = netSignalUnits >= 0 ? 'var(--win-color)' : 'var(--loss-color)';
+
+        document.getElementById('netFibVal').innerText = `${netFibUnits >= 0 ? '+' : ''}${netFibUnits.toFixed(2)} 單位`;
+        document.getElementById('netFibVal').style.color = netFibUnits >= 0 ? 'var(--win-color)' : 'var(--loss-color)';
+
+        let currentAnalysis = analyzeCoresForDataset(rawHistory);
+        document.getElementById('tieImpactVal').innerText = `${(currentAnalysis.tieRatio * 100).toFixed(1)}%`;
+
+        // 3. 渲染珠盤路 (帶標記) 與下三路
+        renderRoads(predHistoryHits);
+
+        // 4. 渲染四大核心卡片與儀表板
+        renderCoreCards(currentAnalysis.cores);
+        renderDashboard(currentAnalysis, FIB_SEQ[fibIndex]);
+    }
+
+    function renderDashboard(analysis, currentFibUnit) {
+        let finalTargetEl = document.getElementById('finalTarget');
+        let finalConfEl = document.getElementById('finalConfidence');
+        let finalReasonEl = document.getElementById('finalReason');
+        let defBanner = document.getElementById('defenseBanner');
+        let barB = document.getElementById('barB');
+        let barP = document.getElementById('barP');
+        let sigBadge = document.getElementById('signalBadge');
+
+        // 防禦機制狀態
+        if (analysis.riskLevel === 'DANGER') {
+            defBanner.className = 'defense-banner def-danger';
+            defBanner.innerText = '🛡️ 防禦機制：🔴 高風險環境 (已啟動強制避險觀望)';
+        } else if (analysis.riskLevel === 'WARN') {
+            defBanner.className = 'defense-banner def-warn';
+            defBanner.innerText = '🛡️ 防禦機制：🟡 中風險環境 (注意局勢波動)';
+        } else {
+            defBanner.className = 'defense-banner def-safe';
+            defBanner.innerText = '🛡️ 防禦機制：🟢 低風險環境 (模式穩定)';
+        }
+
+        // 莊閒權重百分比計算
+        let sumW = analysis.totalWeightB + analysis.totalWeightP;
+        let pctB = sumW > 0 ? Math.round((analysis.totalWeightB / sumW) * 100) : 50;
+        let pctP = 100 - pctB;
+
+        barB.style.width = `${pctB}%`;
+        barB.innerText = `莊 ${pctB}% (${analysis.totalWeightB.toFixed(1)})`;
+        barP.style.width = `${pctP}%`;
+        barP.innerText = `閒 ${pctP}% (${analysis.totalWeightP.toFixed(1)})`;
+
+        // 訊號強弱標示
+        let diff = analysis.weightDiff;
+        let recommendedSignalUnit = 0;
+        if (analysis.riskLevel === 'DANGER' || analysis.finalTarget === 'N') {
+            sigBadge.innerText = '訊號等級: ⏸️ 中立觀望';
+            recommendedSignalUnit = 0;
+        } else if (diff >= 3.0) {
+            sigBadge.innerText = '訊號等級: 🔥 極強訊號 (高置信度)';
+            recommendedSignalUnit = 3;
+        } else if (diff >= 1.8) {
+            sigBadge.innerText = '訊號等級: ⚡ 中強訊號';
+            recommendedSignalUnit = 2;
+        } else {
+            sigBadge.innerText = '訊號等級: 💧 弱訊號 (試探試水)';
+            recommendedSignalUnit = 1;
+        }
+
+        document.getElementById('betSignal').innerText = `${recommendedSignalUnit} 單位`;
+        document.getElementById('betFib').innerText = `${recommendedSignalUnit > 0 ? currentFibUnit : 0} 單位`;
+
+        // 最終目標輸出
+        let pureLen = getPureHistory(rawHistory).length;
+        if (pureLen < 5) {
+            finalTargetEl.className = 'final-target target-N';
+            finalTargetEl.innerText = '觀望 (數據累積中)';
+            finalConfEl.innerText = '綜合置信度: --%';
+            finalReasonEl.innerText = '有效局數不足 5 局，請持續輸入賽果。';
+            return;
+        }
+
+        if (analysis.finalTarget === 'B') {
+            finalTargetEl.className = 'final-target target-B';
+            finalTargetEl.innerText = '下注建議：莊 (Banker)';
+        } else if (analysis.finalTarget === 'P') {
+            finalTargetEl.className = 'final-target target-P';
+            finalTargetEl.innerText = '下注建議：閒 (Player)';
+        } else {
+            finalTargetEl.className = 'final-target target-N';
+            finalTargetEl.innerText = '觀望避險 (多空對峙)';
+        }
+
+        let confValue = Math.min(95, Math.round((Math.max(analysis.totalWeightB, analysis.totalWeightP) / (sumW + 1)) * 100 + 40));
+        finalConfEl.innerText = `綜合置信度: ${confValue}%`;
+        finalReasonEl.innerText = `莊總權重(${analysis.totalWeightB.toFixed(2)}) vs 閒總權重(${analysis.totalWeightP.toFixed(2)})\n(已注入天生莊優勢 +0.15 加權與和局干擾因子)`;
     }
 
     function renderCoreCards(cores) {
@@ -679,7 +830,7 @@
                 <div class="card-header">
                     <span class="card-title">${c.name}</span>
                     <div class="card-meta">
-                        <span class="card-weight">總權重 ${res.weight.toFixed(1)}</span>
+                        <span class="card-weight">權重 ${res.weight.toFixed(1)}</span>
                         <span class="card-target ${targetTag}">${targetDisplay}</span>
                     </div>
                 </div>
@@ -694,78 +845,7 @@
         });
     }
 
-    function calculateFinalDecision(cores) {
-        let totalWeightB = 0;
-        let totalWeightP = 0;
-
-        cores.forEach(c => {
-            if (c.mapped.target === 'B') totalWeightB += c.mapped.weight;
-            if (c.mapped.target === 'P') totalWeightP += c.mapped.weight;
-        });
-
-        let finalTargetEl = document.getElementById('finalTarget');
-        let finalConfEl = document.getElementById('finalConfidence');
-        let finalReasonEl = document.getElementById('finalReason');
-
-        let pure = getPureHistory(rawHistory);
-        if (pure.length < 5) {
-            finalTargetEl.className = 'final-target target-N';
-            finalTargetEl.innerText = '觀望 (數據累積中)';
-            finalConfEl.innerText = '綜合置信度: --%';
-            finalReasonEl.innerText = '有效開牌數據不足 5 局，請持續輸入賽果。';
-            return;
-        }
-
-        let total = totalWeightB + totalWeightP;
-        if (total === 0 || totalWeightB === totalWeightP) {
-            finalTargetEl.className = 'final-target target-N';
-            finalTargetEl.innerText = '觀望 (多空制衡)';
-            finalConfEl.innerText = '綜合置信度: 50%';
-            finalReasonEl.innerText = '4大核心權重相互抵消或未觸發顯著條件，建議本局觀望。';
-            updateBetStrategy(0);
-            return;
-        }
-
-        let finalChoice = totalWeightB > totalWeightP ? 'B' : 'P';
-        let mainWeight = Math.max(totalWeightB, totalWeightP);
-        let confidence = Math.min(95, Math.round((mainWeight / (total + 1)) * 100 + 45));
-
-        if (finalChoice === 'B') {
-            finalTargetEl.className = 'final-target target-B';
-            finalTargetEl.innerText = '下注：莊 (Banker)';
-        } else {
-            finalTargetEl.className = 'final-target target-P';
-            finalTargetEl.innerText = '下注：閒 (Player)';
-        }
-
-        finalConfEl.innerText = `綜合置信度: ${confidence}% (權重分: ${mainWeight.toFixed(1)})`;
-        finalReasonEl.innerText = `四大核心總權重對決：莊 (${totalWeightB.toFixed(1)}) vs 閒 (${totalWeightP.toFixed(1)})\n綜合判定最佳輸出標的。`;
-
-        updateBetStrategy(confidence);
-    }
-
-    // 實時下注策略
-    function updateBetStrategy(conf) {
-        let betSignal = document.getElementById('betSignal');
-        let betFib = document.getElementById('betFib');
-
-        if (conf < 60) {
-            betSignal.innerText = '觀望 0 單位';
-            betSignal.style.color = 'var(--loss-color)';
-        } else if (conf < 75) {
-            betSignal.innerText = '1 單位';
-            betSignal.style.color = 'var(--win-color)';
-        } else if (conf < 88) {
-            betSignal.innerText = '2 單位';
-            betSignal.style.color = 'var(--win-color)';
-        } else {
-            betSignal.innerText = '3 單位 (重注)';
-            betSignal.style.color = 'var(--accent-gold)';
-        }
-    }
-
-    // 路單圖表渲染
-    function renderRoads() {
+    function renderRoads(predHits) {
         document.getElementById('handCounter').innerText = `總局數: ${rawHistory.length}/${MAX_HANDS}`;
         
         let cntB = rawHistory.filter(x => x === 'B').length;
@@ -776,17 +856,36 @@
         document.getElementById('cntP').innerText = cntP;
         document.getElementById('cntT').innerText = cntT;
 
-        // 渲染珠盤路
+        // 渲染珠盤路與預測標記
         let beadEl = document.getElementById('beadPlate');
         beadEl.innerHTML = '';
-        rawHistory.forEach(r => {
+        rawHistory.forEach((r, idx) => {
+            let itemWrap = document.createElement('div');
+            itemWrap.className = 'bead-item-wrapper';
+
             let badge = document.createElement('div');
             badge.className = `badge-box badge-box-${r}`;
             badge.innerText = r === 'B' ? '莊' : (r === 'P' ? '閒' : '和');
-            beadEl.appendChild(badge);
+
+            let tag = document.createElement('span');
+            let hitStatus = predHits[idx] || 'SKIP';
+            if (hitStatus === 'HIT') {
+                tag.className = 'pred-tag tag-hit';
+                tag.innerText = '✅成功';
+            } else if (hitStatus === 'MISS') {
+                tag.className = 'pred-tag tag-miss';
+                tag.innerText = '❌失敗';
+            } else {
+                tag.className = 'pred-tag tag-skip';
+                tag.innerText = '➖觀望';
+            }
+
+            itemWrap.appendChild(badge);
+            itemWrap.appendChild(tag);
+            beadEl.appendChild(itemWrap);
         });
 
-        // 渲染大路與下三路矩陣
+        // 渲染大路與下三路
         let pure = getPureHistory(rawHistory);
         renderMatrix('roadBigRoad', buildLogicalCols(pure), 'bigroad');
         renderMatrix('roadBigEye', buildLogicalCols(getDerivedRoadSequence(pure, 1)), 'bigeye');
