@@ -21,6 +21,7 @@
             --weight-color: #d8b4fe;
             --weight-bg: rgba(168, 85, 247, 0.15);
             --resonance-color: #f97316;
+            --tie-sniper: #0ea5e9;
         }
         * {box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;}
         body {background-color: var(--bg-color); color: var(--text-color); padding: 16px; max-width: 1280px; margin: 0 auto; padding-bottom: 80px;}
@@ -124,15 +125,26 @@
         .card-conf { font-size: 0.75rem; font-weight: bold; background: rgba(245, 158, 11, 0.1); color: var(--accent-gold); padding: 2px 6px; border-radius: 4px; }
         .card-weight { font-size: 0.75rem; font-weight: bold; background: var(--weight-bg); color: var(--weight-color); padding: 2px 6px; border-radius: 4px; }
         .card-target { font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }
+        
+        /* 標籤顏色 */
         .tag-B { background-color: rgba(239, 68, 68, 0.2); color: var(--banker-color); }
         .tag-P { background-color: rgba(59, 130, 246, 0.2); color: var(--player-color); }
         .tag-N { background-color: rgba(148, 163, 184, 0.2); color: var(--text-muted); }
         .tag-T { background-color: rgba(34, 197, 94, 0.2); color: var(--tie-color); }
+        
+        /* 專屬狙擊按鈕色系 */
+        .tag-SNIPER { background-color: rgba(14, 165, 233, 0.2); color: var(--tie-sniper); border: 1px solid var(--tie-sniper); }
+
         .section-box {background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 4px;}
         .section-title { font-size: 0.78rem; color: var(--accent-gold); font-weight: bold;}
         .tie-card .section-title { color: var(--tie-color); }
         .section-content { font-size: 0.8rem; color: var(--text-muted); line-height: 1.35; }
         
+        .tie-advice { margin-top: 6px; padding: 6px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; text-align: center; }
+        .tie-advice.high { background: rgba(14, 165, 233, 0.15); color: var(--tie-sniper); border: 1px dashed var(--tie-sniper); }
+        .tie-advice.mid { background: rgba(245, 158, 11, 0.15); color: var(--accent-gold); border: 1px dashed var(--accent-gold); }
+        .tie-advice.low { background: rgba(148, 163, 184, 0.15); color: var(--text-muted); border: 1px dashed var(--text-muted); }
+
         .stats-panel-bottom {background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin-top: 12px;}
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 12px;}
         .stat-card {background-color: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; text-align: center; display: flex; flex-direction: column; gap: 4px;}
@@ -144,7 +156,7 @@
 
 <header>
     <h1>百家樂多維路單分析與旗艦預測系統</h1>
-    <p aria-live="polite">終極神級精算版 • 大數底盤機率融合 / AI 隱性干擾分析 / 全局動態防禦</p>
+    <p aria-live="polite">終極神級精算版 • 主動式和局狙擊系統 / AI 隱性干擾分析 / 全局動態防禦</p>
 </header>
 
 <div class="panel-container">
@@ -385,13 +397,18 @@
         return { override: false, reason: `【10萬局深度模擬】趨勢動態平衡，採納常規分析邏輯。` };
     }
 
+    // ==========================================
+    // 獨立和局模擬引擎 (升級: 間距追蹤與主動狙擊下注建議)
+    // ==========================================
     function simulateIndependentTieProbability(history) {
-        if (history.length < 5) return { active: false, percent: 0, reason: "數據不足，無法執行和局預測" };
+        if (history.length < 5) return { active: false, percent: 0, reason: "數據不足，無法執行和局預測", betAdvice: "等待數據", adviceClass: "low", tagClass: "tag-N" };
+        
         let tieCount = history.filter(x => x === 'T').length;
         let baseProb = tieCount / history.length;
         let recent10 = history.slice(-10);
         let recentTieCount = recent10.filter(x => x === 'T').length;
         let recentProb = recentTieCount / 10;
+        
         let combinedProb = (baseProb * 0.4) + (recentProb * 0.6);
         if (combinedProb < 0.05) combinedProb = 0.09;
         
@@ -401,12 +418,39 @@
             let noise = (Math.random() - 0.5) * 0.06;
             if (Math.random() < (combinedProb + noise)) hits++;
         }
-        
         let finalPct = (hits / ITERS) * 100;
-        let reason = `AI 已模擬 10 萬局未來演進。依據本靴全局數據 (${tieCount}次和) 及近期 10 局波動，預測下一局出現「和局」機率為 ${finalPct.toFixed(1)}%。`;
-        if (finalPct >= 25) reason += " ⚠️【和局高風險區】近期和局頻繁爆發，強烈建議保守下注或防禦性打和。";
-        else if (finalPct < 10) reason += " 📉 盤路穩定，和局干擾機率極低。";
-        return { active: true, percent: finalPct.toFixed(1), reason: reason, isHighRisk: finalPct >= 20 };
+
+        // 【間距追蹤】: 尋找上次出和局的距離
+        let lastTieIndex = history.lastIndexOf('T');
+        let handsSinceLastTie = lastTieIndex === -1 ? history.length : (history.length - 1 - lastTieIndex);
+
+        let reason = `AI 已模擬 10 萬局未來演進。依據本靴全局數據 (${tieCount}次和) 及近期波動，預測下一局出現「和局」機率為 ${finalPct.toFixed(1)}%。\n`;
+        let betAdvice = "";
+        let adviceClass = "low";
+        let tagClass = "tag-N";
+
+        // 動態判定下注建議與間距壓力
+        if (finalPct >= 22 || (finalPct >= 18 && handsSinceLastTie >= 8)) {
+            // 高機率區 或 (中高機率且間距拉長) -> 觸發狙擊
+            betAdvice = "🎯 高賠率狙擊：建議下注 1 單位";
+            adviceClass = "high";
+            tagClass = "tag-SNIPER";
+            reason += `🔥 【出手門檻達成】目前距離上次和局已 ${handsSinceLastTie} 局，機率與間距壓力雙重疊加，強烈建議出手打和！`;
+        } else if (finalPct >= 15) {
+            // 溫水區
+            betAdvice = "⚠️ 輕注試探：建議下注 0.5 單位";
+            adviceClass = "mid";
+            tagClass = "tag-T";
+            reason += `💡 【和局機率浮現】目前距離上次和局已 ${handsSinceLastTie} 局，機率正在升溫，可嘗試輕注小博。`;
+        } else {
+            // 低機率區
+            betAdvice = "🛑 嚴格觀望 (不打和)";
+            adviceClass = "low";
+            tagClass = "tag-N";
+            reason += `📉 目前和局機率偏低 (距離上次和局 ${handsSinceLastTie} 局)，和局賠率雖高但無優勢，建議保留資金。`;
+        }
+
+        return { active: true, percent: finalPct.toFixed(1), reason: reason, betAdvice: betAdvice, adviceClass: adviceClass, tagClass: tagClass };
     }
 
     function analyzePatternCore(sequence) {
@@ -460,7 +504,7 @@
         }
 
         if (curLen >= 7) return { target: oppItem, confidence: 97, reason: `【大龍臨界點】長連達極限 (長度${curLen})，動態預測將破路，啟動高強度反打！` };
-        if (jumpCount >= 6) return { target: lastItem, confidence: 96, reason: `【長單跳臨界點】單跳已達 ${jumpCount} 次，逼近極限變盤點，預測斷單跳！` };
+        if (jumpCount >= 6) return { target: lastItem, confidence: 96, reason: `【長單跳臨界點】單跳已達 ${jumpCount} 次，逼極極限變盤點，預測斷單跳！` };
 
         if (curLen === 1 && completedDoubles >= 4) return { target: oppItem, confidence: 95, reason: `【長雙跳臨界點】雙跳規律已達 ${completedDoubles} 次，極限變盤反打 (斷雙跳)。` };
         if (curLen === 2 && completedDoubles >= 3) return { target: lastItem, confidence: 94, reason: `【長雙跳臨界點】雙跳達極限，預測變盤轉長連。` };
@@ -621,11 +665,8 @@
         // ==========================================
         // 百家樂基本數學勝率基準融入
         // ==========================================
-        // 基本優勝概率: 莊 45.8%, 閒 44.6%, 和 9.6%
-        // 去除和局影響後之基準: 莊 51.0%, 閒 49.0%
         let baseB = 51.0;
         let baseP = 49.0;
-        // 賦予基礎概率 100 分的初始底盤權重
         bScore += baseB;
         pScore += baseP;
 
@@ -689,31 +730,26 @@
                     if (basePred.target === 'NEUTRAL') {
                         skipCount++;
                     } else {
-                        // 1. 記錄原始AI預測的正打勝負
                         rawAiBets++;
                         let isRawWin = (basePred.target === res);
                         if (isRawWin) rawAiWins++;
 
-                        // 2. 計算即時正反打勝率
                         let normalWinRate = (rawAiWins / rawAiBets) * 100;
                         let reverseWinRate = 100 - normalWinRate;
 
-                        // 3. 判斷房型 (滿 5 局才啟動)
                         let roomStateLoop = "ACCUMULATING";
                         if (rawAiBets >= 5) {
                             if (normalWinRate >= 60) roomStateLoop = "NORMAL";
                             else if (reverseWinRate >= 60) roomStateLoop = "REVERSE";
-                            else roomStateLoop = "CHAOS"; // 40~60% 間為混沌防禦
+                            else roomStateLoop = "CHAOS"; 
                         }
 
-                        // 4. 根據房型進行預測轉換
                         if (roomStateLoop === "CHAOS") {
-                            // 震盪期強制觀望不記錄勝負
                             skipCount++;
                         } else {
                             let finalTarget = basePred.target;
                             if (roomStateLoop === "REVERSE") {
-                                finalTarget = finalTarget === 'B' ? 'P' : 'B'; // 觸發反轉
+                                finalTarget = finalTarget === 'B' ? 'P' : 'B'; 
                             }
                             totalBets++;
                             let icon = document.createElement("span");
@@ -788,11 +824,12 @@
         if(baccaratHistory.length >= 5) {
             grid.innerHTML += `
             <div class="analysis-card tie-card">
-                <div class="card-header"><span class="card-title">🎲 10萬局獨立和局模擬引擎</span>
+                <div class="card-header"><span class="card-title">🎲 10萬局和局狙擊模擬引擎</span>
                 <div class="card-meta">
                     <span class="card-conf" style="color:var(--tie-color); background:rgba(34,197,94,0.1)">發生率 ${tieSim.percent}%</span>
-                    <span class="card-target tag-T">和 (T) 預測</span>
+                    <span class="card-target ${tieSim.tagClass}">和 (T) 預測</span>
                 </div></div>
+                <div class="section-box"><div class="section-title">🎯 狙擊建議</div><div class="tie-advice ${tieSim.adviceClass}">${tieSim.betAdvice}</div></div>
                 <div class="section-box"><div class="section-title">📊 綜合分析結果</div><div class="section-content">${tieSim.reason}</div></div>
             </div>`;
         }
@@ -817,9 +854,6 @@
         let baseF = getFinalPredictionDetails(baccaratHistory);
         let f = { ...baseF };
 
-        // ==========================================
-        // 評估當前防禦機制狀態 (對下一局的預測影響)
-        // ==========================================
         let roomState = "WAIT";
         let currentNormalWinRate = rawAiBets > 0 ? ((rawAiWins / rawAiBets) * 100).toFixed(1) : 0;
         let currentReverseWinRate = rawAiBets > 0 ? (100 - currentNormalWinRate).toFixed(1) : 0;
@@ -831,10 +865,9 @@
         } else if (currentReverseWinRate >= 60) {
             roomState = "REVERSE";
         } else {
-            roomState = "CHAOS"; // 40% ~ 60% 震盪期
+            roomState = "CHAOS"; 
         }
 
-        // 應用防禦機制到最終結果
         if (f.target !== 'NEUTRAL') {
             if (roomState === "REVERSE") {
                 f.target = f.target === 'B' ? 'P' : 'B';
@@ -846,7 +879,6 @@
             }
         }
 
-        // 更新 UI 介面徽章
         document.getElementById("resonanceBadge").style.display = f.hasResonance ? 'block' : 'none';
         
         let rb = document.getElementById("roomBadge");
