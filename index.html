@@ -94,7 +94,7 @@
         .target-P { color: var(--player-color); }
         .target-N { color: var(--text-muted); }
         .confidence-box { font-size: 1.25rem; color: var(--accent-gold); font-weight: bold; margin-bottom: 10px; }
-        .final-reason { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; white-space: pre-line; }
+        .final-reason { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; white-space: pre-line; text-align: left; width: 100%;}
         
         /* 勝率百分比條 */
         .prob-bar-container { display: flex; width: 100%; max-width: 300px; height: 22px; border-radius: 6px; overflow: hidden; margin-top: 14px; font-size: 0.8rem; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
@@ -105,7 +105,8 @@
         .resonance-badge {position: absolute; top: 10px; left: 10px; font-size: 0.75rem; font-weight: bold; background: rgba(249, 115, 22, 0.2); color: var(--resonance-color); border: 1px solid var(--resonance-color); padding: 4px 8px; border-radius: 6px; display: none; animation: pulse-orange 1.5s infinite;}
         .room-badge {position: absolute; top: 10px; right: 10px; font-size: 0.75rem; font-weight: bold; padding: 4px 8px; border-radius: 6px; z-index: 10;}
         .room-normal { background: rgba(16, 185, 129, 0.15); color: var(--win-color); border: 1px solid var(--win-color); }
-        .room-reverse { background: rgba(244, 63, 94, 0.15); color: var(--loss-color); border: 1px solid var(--loss-color); animation: pulse-red 1.5s infinite;}
+        .room-warning { background: rgba(245, 158, 11, 0.15); color: var(--accent-gold); border: 1px solid var(--accent-gold); animation: pulse-orange 1.5s infinite; }
+        .room-danger { background: rgba(244, 63, 94, 0.15); color: var(--loss-color); border: 1px solid var(--loss-color); animation: pulse-red 1.5s infinite;}
         .room-wait { background: rgba(148, 163, 184, 0.15); color: var(--text-muted); border: 1px solid var(--text-muted); }
 
         @keyframes pulse-orange {0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(249, 115, 22, 0); } 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }}
@@ -156,7 +157,7 @@
 
 <header>
     <h1>百家樂多維路單分析與旗艦預測系統</h1>
-    <p aria-live="polite">終極神級精算版 • 大數底盤機率融合 / 防盲目傾斜保護 / 淨勝單位統計</p>
+    <p aria-live="polite">終極神級精算版 • 大數底盤融合 / 特防波動AI分析 / 淨勝單位統計</p>
 </header>
 
 <div class="panel-container">
@@ -720,8 +721,11 @@
         document.getElementById("beadCountInfo").innerText = `總局數: ${baccaratHistory.length}/${MAX_HANDS} (有效: ${countB+countP}/5)`;
         
         let totalBets = 0, winCount = 0, lossCount = 0, skipCount = 0, netUnits = 0;
+        
+        // 用於全局動態追蹤預測數據與波動判定
         let rawAiWins = 0;
         let rawAiBets = 0;
+        let maxNormalWinRate = 0;
         
         baccaratHistory.forEach((res, i) => {
             let badge = document.createElement("div");
@@ -735,33 +739,46 @@
                     if (basePred.target === 'NEUTRAL') {
                         skipCount++;
                     } else {
-                        rawAiBets++;
-                        let isRawWin = (basePred.target === res);
-                        if (isRawWin) rawAiWins++;
-
-                        let normalWinRate = (rawAiWins / rawAiBets) * 100;
-                        let reverseWinRate = 100 - normalWinRate;
+                        // 1. 計算這局預測前的歷史特防勝率與波動狀態
+                        let currentNormalWinRate = rawAiBets > 0 ? (rawAiWins / rawAiBets) * 100 : 0;
+                        if (rawAiBets >= 5 && currentNormalWinRate > maxNormalWinRate) {
+                            maxNormalWinRate = currentNormalWinRate;
+                        }
 
                         let roomStateLoop = "ACCUMULATING";
                         if (rawAiBets >= 5) {
-                            if (normalWinRate >= 60) roomStateLoop = "NORMAL";
-                            else if (reverseWinRate >= 60) roomStateLoop = "REVERSE";
-                            else roomStateLoop = "CHAOS"; 
+                            let drop = maxNormalWinRate - currentNormalWinRate;
+                            let isFluctuating = (drop >= 15) || (currentNormalWinRate < 50);
+
+                            if (isFluctuating) {
+                                // 發生波動，AI 判斷是否強勢突破
+                                if (basePred.hasResonance || basePred.confidence >= 85) {
+                                    roomStateLoop = "SPECIAL_DEFENSE_ATTACK";
+                                } else {
+                                    roomStateLoop = "SPECIAL_DEFENSE_WAIT";
+                                }
+                            } else {
+                                roomStateLoop = "NORMAL_DEFENSE";
+                            }
                         }
 
-                        if (roomStateLoop === "CHAOS") {
-                            skipCount++;
+                        // 2. 結算此局
+                        let finalTarget = basePred.target;
+                        if (roomStateLoop === "SPECIAL_DEFENSE_WAIT") {
+                            skipCount++; // 波動啟動觀望
+                            // 即使觀望，底層 AI 勝負依舊持續運算用作基準追蹤
+                            rawAiBets++;
+                            if (basePred.target === res) rawAiWins++;
                         } else {
-                            let finalTarget = basePred.target;
-                            if (roomStateLoop === "REVERSE") {
-                                finalTarget = finalTarget === 'B' ? 'P' : 'B'; 
-                            }
+                            rawAiBets++;
+                            let isRawWin = (basePred.target === res);
+                            if (isRawWin) rawAiWins++;
+
                             totalBets++;
                             let icon = document.createElement("span");
                             icon.className = "pred-icon";
                             let isWin = (finalTarget === res);
                             
-                            // 計算這把下注多少單位
                             let betUnit = basePred.betUnit;
 
                             if (isWin) { 
@@ -771,7 +788,6 @@
                                 icon.innerText = "❌"; lossCount++; 
                                 netUnits -= betUnit;
                             }
-                            
                             badge.appendChild(icon);
                         }
                     }
@@ -872,28 +888,37 @@
         let baseF = getFinalPredictionDetails(baccaratHistory);
         let f = { ...baseF };
 
+        // ==========================================
+        // 評估當前防禦機制狀態 (對下一局預測影響)
+        // ==========================================
         let roomState = "WAIT";
         let currentNormalWinRate = rawAiBets > 0 ? ((rawAiWins / rawAiBets) * 100).toFixed(1) : 0;
-        let currentReverseWinRate = rawAiBets > 0 ? (100 - currentNormalWinRate).toFixed(1) : 0;
+        if (rawAiBets >= 5 && currentNormalWinRate > maxNormalWinRate) {
+            maxNormalWinRate = currentNormalWinRate;
+        }
 
         if (rawAiBets < 5) {
             roomState = "ACCUMULATING";
-        } else if (currentNormalWinRate >= 60) {
-            roomState = "NORMAL";
-        } else if (currentReverseWinRate >= 60) {
-            roomState = "REVERSE";
         } else {
-            roomState = "CHAOS"; 
+            let drop = maxNormalWinRate - currentNormalWinRate;
+            let isFluctuating = (drop >= 15) || (currentNormalWinRate < 50);
+
+            if (isFluctuating) {
+                if (f.hasResonance || f.confidence >= 85) {
+                    roomState = "SPECIAL_DEFENSE_ATTACK";
+                } else {
+                    roomState = "SPECIAL_DEFENSE_WAIT";
+                }
+            } else {
+                roomState = "NORMAL_DEFENSE";
+            }
         }
 
+        // 應用特防波動機制到最終結果
         if (f.target !== 'NEUTRAL') {
-            if (roomState === "REVERSE") {
-                f.target = f.target === 'B' ? 'P' : 'B';
-                let tempProb = f.bProb; f.bProb = f.pProb; f.pProb = tempProb;
-                let tempScore = f.bScore; f.bScore = f.pScore; f.pScore = tempScore;
-            } else if (roomState === "CHAOS") {
+            if (roomState === "SPECIAL_DEFENSE_WAIT") {
                 f.target = 'NEUTRAL';
-                f.reasonCode = 'CHAOS_DEFENSE';
+                f.reasonCode = 'FLUCTUATION_DEFENSE';
             }
         }
 
@@ -903,15 +928,15 @@
         if (roomState === "ACCUMULATING" || roomState === "WAIT") {
             rb.className = "room-badge room-wait";
             rb.innerText = `防禦機制: 數據累積中 (當前 ${rawAiBets} 局)`;
-        } else if (roomState === "NORMAL") {
+        } else if (roomState === "NORMAL_DEFENSE") {
             rb.className = "room-badge room-normal";
-            rb.innerText = `🟢 正打房 (正打勝率 ${currentNormalWinRate}%)`;
-        } else if (roomState === "REVERSE") {
-            rb.className = "room-badge room-reverse";
-            rb.innerText = `🔴 反打房 (反打勝率 ${currentReverseWinRate}%)`;
-        } else if (roomState === "CHAOS") {
-            rb.className = "room-badge room-wait";
-            rb.innerText = `⚠️ 震盪房 (正反勝率均不足60%)`;
+            rb.innerText = `🟢 特防機制啟動 (勝率 ${currentNormalWinRate}%)`;
+        } else if (roomState === "SPECIAL_DEFENSE_WAIT") {
+            rb.className = "room-badge room-danger";
+            rb.innerText = `🚨 波動出現觀望 (勝率 ${currentNormalWinRate}%)`;
+        } else if (roomState === "SPECIAL_DEFENSE_ATTACK") {
+            rb.className = "room-badge room-warning";
+            rb.innerText = `🔥 波動中強力突破 (勝率 ${currentNormalWinRate}%)`;
         }
 
         let ft = document.getElementById("finalTarget"), fp = document.getElementById("finalPct"), fr = document.getElementById("finalReason"), fb = document.getElementById("finalBetting");
@@ -921,10 +946,10 @@
             ft.innerText = "觀望"; ft.className = "final-target target-N";
             fp.innerText = "累積數據中"; fr.innerText = "需至少 5 局有效數據。"; fb.innerHTML = "";
             pbContainer.style.display = "none";
-        } else if (f.reasonCode === 'CHAOS_DEFENSE') {
-            ft.innerText = "觀望 (勝率震盪)"; ft.className = "final-target target-N";
-            fp.innerText = `防禦啟動: 正反勝率均不足 60%`;
-            let defendReason = `目前正打勝率 ${currentNormalWinRate}%，反打勝率 ${currentReverseWinRate}%。\n兩者均未達 60% 安全門檻，代表盤路處於混沌無序狀態，系統強制空倉觀望以保護本金。`;
+        } else if (f.reasonCode === 'FLUCTUATION_DEFENSE') {
+            ft.innerText = "觀望 (波動防禦)"; ft.className = "final-target target-N";
+            fp.innerText = `防禦啟動: AI判定盤路惡化`;
+            let defendReason = `🚨【波動防禦啟動】\n當前勝率為 ${currentNormalWinRate}% (高點回落達15%或總命中率低於50%)。\nAI 評估當前盤路訊號未達強力突破標準，強制觀望以保護本金。`;
             if (f.tieInfluenceText) defendReason += f.tieInfluenceText;
             fr.innerText = defendReason;
             fb.innerHTML = `<div class="bet-advice wait">嚴格空倉防禦</div>`;
@@ -940,7 +965,6 @@
             } else if (f.reasonCode === 'NOT_ENOUGH_CORES') {
                 defendReason = `目前僅觸發 ${f.valid} 個有效核心，未達最低 2 個核心的安全門檻，啟動核心防禦。`;
             } else {
-                // 防盲目傾斜動態顯示
                 if (f.activeNeutralCount > 0) {
                     defendReason = `🚨【防盲目傾斜機制啟動】\n四大核心中出現 ${f.activeNeutralCount} 個強烈觀望訊號！\n為避免盲目帶風向，系統已大幅提高防禦門檻。\n融合後權重：莊 (${f.bScore.toFixed(1)}) vs 閒 (${f.pScore.toFixed(1)})。`;
                 } else {
@@ -960,8 +984,8 @@
             let reasonText = `📊【大數底盤基準】百家樂天生概率 (莊45.8%/閒44.6%/和9.6%)，去和局基準為 莊51% / 閒49%。\n`;
             reasonText += `${f.hasResonance ? "🔥 三路共振爆發！\n" : ""}🧠【AI 盤路權重疊加】融合後總分：莊 ${f.bScore.toFixed(1)} vs 閒 ${f.pScore.toFixed(1)}。成功觸發 ${f.valid} 個核心！`;
             
-            if (roomState === "REVERSE") reasonText += `\n⚠️【反打房防禦啟動】累積反打勝率達 ${currentReverseWinRate}%，系統已強制將原預測反轉！`;
-            else if (roomState === "NORMAL") reasonText += `\n✅【正打房狀態維持】累積正打勝率達 ${currentNormalWinRate}%，按常規分析邏輯預測。`;
+            if (roomState === "SPECIAL_DEFENSE_ATTACK") reasonText += `\n⚠️【波動出現但強勢突破】雖然勝率出現波動 (跌幅達15%或低於50%)，但 AI 偵測到強烈共振或極高可信度，判定頂住壓力繼續出手！`;
+            else if (roomState === "NORMAL_DEFENSE") reasonText += `\n✅【特防狀態維持】目前命中率大於 50% 且無劇烈波動，按常規分析邏輯穩健預測。`;
             else if (roomState === "ACCUMULATING") reasonText += `\n⏳【數據累積中】歷史預測局數不足 5 局，暫以常規邏輯輸出。`;
             
             if (f.tieInfluenceText) reasonText += f.tieInfluenceText;
