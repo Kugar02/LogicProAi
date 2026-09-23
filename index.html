@@ -87,21 +87,29 @@
         .dashboard { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; margin-bottom: 20px; }
         @media (max-width: 820px) { .dashboard { grid-template-columns: 1fr; } }
         .final-card {background-color: var(--card-bg); border: 2px solid var(--accent-gold); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative;}
-        .final-title { font-size: 1rem; color: var(--text-muted); margin-bottom: 8px; font-weight: bold; }
+        .final-title { font-size: 1 rem; color: var(--text-muted); margin-bottom: 8px; font-weight: bold; margin-top: 8px;}
         .final-target { font-size: 1.8rem; font-weight: 800; margin-bottom: 6px; }
         .target-B { color: var(--banker-color); }
         .target-P { color: var(--player-color); }
         .target-N { color: var(--text-muted); }
         .confidence-box { font-size: 1.25rem; color: var(--accent-gold); font-weight: bold; margin-bottom: 10px; }
-        .final-reason { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; }
+        .final-reason { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; white-space: pre-line; }
         
         /* 勝率百分比條 */
         .prob-bar-container { display: flex; width: 100%; max-width: 300px; height: 22px; border-radius: 6px; overflow: hidden; margin-top: 14px; font-size: 0.8rem; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         .prob-bar-b { background-color: var(--banker-color); display: flex; align-items: center; justify-content: center; color: white; transition: width 0.5s ease; }
         .prob-bar-p { background-color: var(--player-color); display: flex; align-items: center; justify-content: center; color: white; transition: width 0.5s ease; }
         
-        .resonance-badge {position: absolute; top: 10px; right: 10px; font-size: 0.75rem; font-weight: bold; background: rgba(249, 115, 22, 0.2); color: var(--resonance-color); border: 1px solid var(--resonance-color); padding: 4px 8px; border-radius: 6px; display: none; animation: pulse 1.5s infinite;}
-        @keyframes pulse {0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(249, 115, 22, 0); } 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }}
+        /* 徽章設定 */
+        .resonance-badge {position: absolute; top: 10px; left: 10px; font-size: 0.75rem; font-weight: bold; background: rgba(249, 115, 22, 0.2); color: var(--resonance-color); border: 1px solid var(--resonance-color); padding: 4px 8px; border-radius: 6px; display: none; animation: pulse-orange 1.5s infinite;}
+        .room-badge {position: absolute; top: 10px; right: 10px; font-size: 0.75rem; font-weight: bold; padding: 4px 8px; border-radius: 6px; z-index: 10;}
+        .room-normal { background: rgba(16, 185, 129, 0.15); color: var(--win-color); border: 1px solid var(--win-color); }
+        .room-reverse { background: rgba(244, 63, 94, 0.15); color: var(--loss-color); border: 1px solid var(--loss-color); animation: pulse-red 1.5s infinite;}
+        .room-wait { background: rgba(148, 163, 184, 0.15); color: var(--text-muted); border: 1px solid var(--text-muted); }
+
+        @keyframes pulse-orange {0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(249, 115, 22, 0); } 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }}
+        @keyframes pulse-red {0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(244, 63, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }}
+        
         .bet-advice {margin-top: 12px; padding: 8px 12px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 6px; font-size: 0.95rem; color: var(--win-color); font-weight: bold; width: 100%; text-align: center;}
         .bet-advice.wait { background: rgba(244, 63, 94, 0.15); border-color: rgba(244, 63, 94, 0.4); color: var(--loss-color); }
         
@@ -136,7 +144,7 @@
 
 <header>
     <h1>百家樂多維路單分析與旗艦預測系統</h1>
-    <p aria-live="polite">終極神級精算版 • 置頂和局模擬 / 動態雙跳矩陣 / 逢跳連 AI 偵測</p>
+    <p aria-live="polite">終極神級精算版 • 置頂和局模擬 / 動態雙跳矩陣 / 正反打房防禦機制</p>
 </header>
 
 <div class="panel-container">
@@ -198,6 +206,8 @@
 <div class="dashboard">
     <div class="final-card" aria-live="assertive">
         <div id="resonanceBadge" class="resonance-badge">🔥 三路共振啟動</div>
+        <div id="roomBadge" class="room-badge room-wait">防禦機制: 數據累積中</div>
+
         <div class="final-title">最終預測建議 (神級動態引擎)</div>
         <div id="finalTarget" class="final-target target-N">觀望 (累積數據中)</div>
         <div id="finalPct" class="confidence-box">綜合可信度 --%</div>
@@ -393,16 +403,12 @@
         }
         
         let finalPct = (hits / ITERS) * 100;
-        let active = finalPct > 15;
         let reason = `AI 已模擬 10 萬局未來演進。依據本靴全局數據 (${tieCount}次和) 及近期 10 局波動，預測下一局出現「和局」機率為 ${finalPct.toFixed(1)}%。`;
         if (finalPct >= 25) reason += " ⚠️【和局高風險區】近期和局頻繁爆發，強烈建議保守下注或防禦性打和。";
         else if (finalPct < 10) reason += " 📉 盤路穩定，和局干擾機率極低。";
         return { active: true, percent: finalPct.toFixed(1), reason: reason, isHighRisk: finalPct >= 20 };
     }
 
-    // ==========================================
-    // 核心型態判斷 (全域邏輯: 單跳, 雙跳, 逢跳連, 房廳)
-    // ==========================================
     function analyzePatternCore(sequence) {
         if (!sequence || sequence.length < 3) return { target: 'NEUTRAL', confidence: 50, reason: '數據不足' };
         
@@ -419,16 +425,14 @@
             return item;
         };
 
-        // 1. 單跳次數統計 (1-1-1...)
         let jumpCount = 0;
         for(let i = numCols - 1; i >= 0; i--) {
             if(colLens[i] === 1) jumpCount++; else break;
         }
 
-        // 2. 雙跳次數統計 (2-2-2...)
         let completedDoubles = 0;
         let checkIdx = curLen === 1 ? numCols - 2 : (curLen === 2 ? numCols - 2 : numCols - 1);
-        if (curLen > 2) completedDoubles = 0; // 若大於2即不在雙跳發展範圍
+        if (curLen > 2) completedDoubles = 0;
         else {
             while (checkIdx >= 0) {
                 if (colLens[checkIdx] === 2) completedDoubles++; else break;
@@ -436,7 +440,6 @@
             }
         }
 
-        // 3. AI 逢紅/藍跳 & 逢紅/藍連 偵測 (觀察最近 6 攔)
         let colorJump = null;
         let colorStreak = null;
         if (numCols >= 4) {
@@ -447,7 +450,6 @@
                 let colorCols = recentMatrix.filter(c => c[0] === colColor);
                 if (colorCols.length >= 2) {
                     let allJumps = colorCols.every(c => c.length === 1);
-                    // 若是尋找連，已完成的列必須 > 1，當前最新的一列若只有 1 且顏色相符，視為還在發育中
                     let allStreaks = colorCols.every(c => {
                         return (c === matrix[numCols-1]) ? true : (c.length > 1);
                     });
@@ -457,15 +459,9 @@
             });
         }
 
-        // ========================
-        // AI 決策權重 (自上而下優先)
-        // ========================
-        
-        // A. 大龍與極端單跳臨界點 (強制反打)
         if (curLen >= 7) return { target: oppItem, confidence: 97, reason: `【大龍臨界點】長連達極限 (長度${curLen})，動態預測將破路，啟動高強度反打！` };
         if (jumpCount >= 6) return { target: lastItem, confidence: 96, reason: `【長單跳臨界點】單跳已達 ${jumpCount} 次，逼近極限變盤點，預測斷單跳！` };
 
-        // B. 雙跳邏輯矩陣 (短/中/長)
         if (curLen === 1 && completedDoubles >= 4) return { target: oppItem, confidence: 95, reason: `【長雙跳臨界點】雙跳規律已達 ${completedDoubles} 次，極限變盤反打 (斷雙跳)。` };
         if (curLen === 2 && completedDoubles >= 3) return { target: lastItem, confidence: 94, reason: `【長雙跳臨界點】雙跳達極限，預測變盤轉長連。` };
         
@@ -475,18 +471,14 @@
         if (curLen === 1 && completedDoubles === 2) return { target: lastItem, confidence: 88, reason: `【短雙跳】雙跳初步成形，順勢補齊。` };
         if (curLen === 2 && completedDoubles === 1) return { target: oppItem, confidence: 86, reason: `【短雙跳】雙跳滿2，順勢換向。` };
 
-        // C. 單跳邏輯矩陣 (短/中)
         if (jumpCount >= 4) return { target: oppItem, confidence: 92, reason: `【中單跳】規律強烈 (單跳 ${jumpCount} 次)，順勢跟單跳。` };
         if (jumpCount === 3) return { target: oppItem, confidence: 89, reason: `【短單跳】規律初步成形 (${jumpCount} 次)，順勢單跳。` };
 
-        // D. AI 逢X跳 / 逢X連
         if (curLen === 1 && colorJump === lastItem) return { target: oppItem, confidence: 90, reason: `【逢${cName(lastItem)}跳】AI 偵測近期逢${cName(lastItem)}必跳，順勢反打換向。` };
         if (curLen === 1 && colorStreak === lastItem) return { target: lastItem, confidence: 90, reason: `【逢${cName(lastItem)}連】AI 偵測近期逢${cName(lastItem)}必連，順勢跟進打連。` };
 
-        // E. 長連順勢
         if (curLen >= 4) return { target: lastItem, confidence: 91, reason: `【長連順勢】目前連 ${curLen}，趨勢強勁未見頂，順打延續。` };
 
-        // F. 矩陣補齊與房廳 (Matrix & Rooms)
         let l1 = colLens[numCols - 1] || 0; let l2 = colLens[numCols - 2] || 0; let l3 = colLens[numCols - 3] || 0;
         if (numCols >= 3 && l3===3 && l2===3 && l1===2) return { target: lastItem, confidence: 90, reason: `【3-3-2 補齊】完美對稱成形，順打補齊第 3 粒。` };
         if (numCols >= 3 && l3===3 && l2===3 && l1===3) return { target: oppItem, confidence: 93, reason: `【3-3-3 反打】長度達區塊極限，觸發變盤反打。` };
@@ -628,22 +620,42 @@
         document.getElementById("beadCountInfo").innerText = `總局數: ${baccaratHistory.length}/${MAX_HANDS} (有效: ${countB+countP}/10)`;
         
         let totalBets = 0, winCount = 0, lossCount = 0, skipCount = 0;
+        let betResults = []; // 儲存每一次有效預測的結果(true=中, false=未中)
         
         baccaratHistory.forEach((res, i) => {
             let badge = document.createElement("div");
             badge.className = `badge-box badge-box-${res}`;
             badge.innerText = res === 'B' ? '莊' : (res === 'P' ? '閒' : '和');
+            
             if (i > 0 && res !== 'T') {
                 let past = baccaratHistory.slice(0, i);
                 if (past.filter(x=>x!=='T').length >= 10) {
-                    let pred = getFinalPredictionDetails(past).target;
-                    if (pred === 'NEUTRAL') skipCount++;
-                    else {
+                    let basePred = getFinalPredictionDetails(past);
+                    if (basePred.target === 'NEUTRAL') {
+                        skipCount++;
+                    } else {
+                        // 歷史打房機制動態計算
+                        let last5 = betResults.slice(-5);
+                        let isReverse = false;
+                        if (last5.length === 5) {
+                            let wins = last5.filter(w => w).length;
+                            if (wins < 3) isReverse = true;
+                        }
+
+                        let finalTarget = basePred.target;
+                        if (isReverse) {
+                            finalTarget = finalTarget === 'B' ? 'P' : 'B'; // 觸發反打房
+                        }
+
                         totalBets++;
                         let icon = document.createElement("span");
                         icon.className = "pred-icon";
-                        if (pred === res) { icon.innerText = "✅"; winCount++; }
+                        let isWin = (finalTarget === res);
+                        
+                        if (isWin) { icon.innerText = "✅"; winCount++; }
                         else { icon.innerText = "❌"; lossCount++; }
+                        
+                        betResults.push(isWin); // 記錄本局的實際打房結果
                         badge.appendChild(icon);
                     }
                 }
@@ -734,8 +746,55 @@
         coreHTML += `</div>`;
         grid.innerHTML += coreHTML;
 
-        let f = getFinalPredictionDetails(baccaratHistory);
+        let baseF = getFinalPredictionDetails(baccaratHistory);
+        let f = { ...baseF };
+
+        // ==========================================
+        // 最終預測防禦機制：評估正打房與反打房
+        // ==========================================
+        let currentLast5 = betResults.slice(-5);
+        let roomState = "WAIT";
+        let isReverseCurrent = false;
+        let winsInLast5 = 0;
+
+        if (currentLast5.length === 5) {
+            winsInLast5 = currentLast5.filter(w => w).length;
+            if (winsInLast5 >= 3) {
+                roomState = "NORMAL"; // 命中3次或以上：正打房
+            } else {
+                roomState = "REVERSE"; // 命中不足3次：反打房
+                isReverseCurrent = true;
+            }
+        } else {
+            roomState = "ACCUMULATING";
+        }
+
+        // 若觸發反打房機制，將最終預測目標與機率反轉
+        if (f.target !== 'NEUTRAL' && isReverseCurrent) {
+            f.target = f.target === 'B' ? 'P' : 'B';
+            let tempProb = f.bProb;
+            f.bProb = f.pProb;
+            f.pProb = tempProb;
+            let tempScore = f.bScore;
+            f.bScore = f.pScore;
+            f.pScore = tempScore;
+        }
+
+        // 更新 UI 介面徽章
         document.getElementById("resonanceBadge").style.display = f.hasResonance ? 'block' : 'none';
+        
+        let rb = document.getElementById("roomBadge");
+        if (roomState === "ACCUMULATING" || roomState === "WAIT") {
+            rb.className = "room-badge room-wait";
+            rb.innerText = `防禦機制: 數據累積中 (${currentLast5.length}/5)`;
+        } else if (roomState === "NORMAL") {
+            rb.className = "room-badge room-normal";
+            rb.innerText = `🟢 正打房 (近5局中${winsInLast5})`;
+        } else {
+            rb.className = "room-badge room-reverse";
+            rb.innerText = `🔴 反打房 (近5局中${winsInLast5})`;
+        }
+
         let ft = document.getElementById("finalTarget"), fp = document.getElementById("finalPct"), fr = document.getElementById("finalReason"), fb = document.getElementById("finalBetting");
         let pbContainer = document.getElementById("probBarContainer"), pbB = document.getElementById("probBarB"), pbP = document.getElementById("probBarP");
         
@@ -749,14 +808,19 @@
             fp.innerText = `AI 預測佔比: 莊 ${f.bProb}% | 閒 ${f.pProb}%`;
             if (f.reasonCode === 'HIGH_VOLATILITY') fr.innerText = f.volText;
             else if (f.reasonCode === 'NOT_ENOUGH_CORES') fr.innerText = `目前僅觸發 ${f.valid} 個有效核心，未達最低 2 個核心的安全門檻，啟動防禦機制。`;
-            else fr.innerText = `莊家加權 (${f.bScore.toFixed(1)}) vs 閒家加權 (${f.pScore.toFixed(1)})。\n核心訊號衝突且差距極小，防禦機制攔截。`;
+            else fr.innerText = `原始權重：莊 (${f.bScore.toFixed(1)}) vs 閒 (${f.pScore.toFixed(1)})。\n核心訊號衝突且差距極小，防禦機制攔截。`;
             fb.innerHTML = `<div class="bet-advice wait">嚴格空倉防禦</div>`;
             pbContainer.style.display = "none";
         } else {
             ft.innerText = f.target === 'B' ? "莊 (B)" : "閒 (P)";
             ft.className = `final-target target-${f.target}`;
             fp.innerText = `綜合可信度 ${f.confidence}%`;
-            fr.innerText = `${f.hasResonance ? "🔥 三路共振爆發！\n" : ""}莊家加權 ${f.bScore.toFixed(1)} vs 閒家加權 ${f.pScore.toFixed(1)}。成功觸發 ${f.valid} 個核心！`;
+            
+            let reasonText = `${f.hasResonance ? "🔥 三路共振爆發！\n" : ""}原始權重：莊 ${f.bScore.toFixed(1)} vs 閒 ${f.pScore.toFixed(1)}。成功觸發 ${f.valid} 個核心！`;
+            if (isReverseCurrent) reasonText += `\n⚠️【反打房防禦啟動】近5局命中低於3次，系統已強制將原預測反轉！`;
+            else if (roomState === "NORMAL") reasonText += `\n✅【正打房狀態維持】近期命中率達標，按常規分析邏輯預測。`;
+            
+            fr.innerText = reasonText;
             fb.innerHTML = `<div class="bet-advice">建議注碼：${f.hasResonance || f.confidence >= 90 ? "3 單位 (強力訊號)" : "1-2 單位 (平注)"}</div>`;
             pbContainer.style.display = "flex";
             pbB.style.width = `${f.bProb}%`; pbB.innerText = `莊 ${f.bProb}%`;
