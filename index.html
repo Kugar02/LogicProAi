@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; frame-ancestors 'none';">
-    <title>百家樂多維路單分析與旗艦預測系統 (AI 10萬局模擬增強版)</title>
+    <title>百家樂多維路單分析與旗艦預測系統 (AI 真實統計增強版)</title>
     <style>
         :root {
             --bg-color: #0b0f19;
@@ -151,6 +151,7 @@
         .card-weight { font-size: 0.75rem; font-weight: bold; background: var(--weight-bg); color: var(--weight-color); padding: 2px 6px; border-radius: 4px; }
         .card-target { font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }
         
+        /* 標籤顏色 */
         .tag-B { background-color: rgba(239, 68, 68, 0.2); color: var(--banker-color); }
         .tag-P { background-color: rgba(59, 130, 246, 0.2); color: var(--player-color); }
         .tag-N { background-color: rgba(148, 163, 184, 0.2); color: var(--text-muted); }
@@ -357,6 +358,9 @@
         updateUI();
     }
 
+    // ==========================================
+    // 標準大路生成引擎 (嚴格落點規則)
+    // ==========================================
     function buildLogicalCols(pureHistory) {
         if (!pureHistory || pureHistory.length === 0) return [];
         let cols = [], cur = [pureHistory[0]];
@@ -368,54 +372,93 @@
         return cols;
     }
 
-    function getDerivedRoadSequence(pureHistory, offset) {
-        let seq = [], mat = buildLogicalCols(pureHistory);
-        if (mat.length === 0) return [];
-        for (let col = 0; col < mat.length; col++) {
-            for (let row = 0; row < mat[col].length; row++) {
-                if (row > 0) {
-                    let tCol = col - offset;
-                    if (tCol < 0) continue;
-                    let tLen = mat[tCol] ? mat[tCol].length : 0;
-                    seq.push(row < tLen ? 'RED' : (row === tLen ? 'BLUE' : 'RED'));
+    // ==========================================
+    // 嚴謹的下三路 (派生路) 生成算法
+    // k = 1 (大眼仔), 2 (小路), 3 (曱甴路)
+    // ==========================================
+    function getDerivedRoadSequence(logicalCols, k) {
+        let seq = [];
+        for (let c = 0; c < logicalCols.length; c++) {
+            if (c < k) continue;
+            let colLen = logicalCols[c].length;
+            for (let r = 0; r < colLen; r++) {
+                if (c === k && r === 0) continue; 
+                if (r === 0) {
+                    let prevLen = logicalCols[c-1].length;
+                    let refLen = logicalCols[c-1-k] ? logicalCols[c-1-k].length : 0;
+                    seq.push(prevLen === refLen ? 'RED' : 'BLUE');
                 } else {
-                    let tCol1 = col - 1, tCol2 = col - 1 - offset;
-                    if (tCol2 < 0) continue;
-                    let len1 = mat[tCol1] ? mat[tCol1].length : 0;
-                    let len2 = mat[tCol2] ? mat[tCol2].length : 0;
-                    seq.push(len1 === len2 ? 'RED' : 'BLUE');
+                    let cell1 = logicalCols[c-k] && logicalCols[c-k].length > r;
+                    let cell2 = logicalCols[c-k] && logicalCols[c-k].length > r - 1;
+                    if ((cell1 && cell2) || (!cell1 && !cell2)) {
+                        seq.push('RED');
+                    } else {
+                        seq.push('BLUE');
+                    }
                 }
             }
         }
         return seq;
     }
 
-    function buildTrueMatrix(sequence, isBigRoad) {
-        let grid = []; 
-        let curCol = 0, curRow = 0, lastColor = null, tieCount = 0;
-        for (let i = 0; i < sequence.length; i++) {
-            let item = sequence[i];
-            if (isBigRoad && item === 'T') {
-                if (lastColor === null) tieCount++; 
-                else grid[curCol][curRow].ties = (grid[curCol][curRow].ties || 0) + 1; 
+    // ==========================================
+    // 修復後的核心網格引擎 (二維座標、防覆寫轉彎)
+    // ==========================================
+    function buildTrueMatrix(history, isBigRoad) {
+        let grid = [];
+        for(let i=0; i<60; i++) grid.push(new Array(6).fill(null)); 
+        
+        let logicalCols = [];
+        let tempCol = [];
+        let ties = 0;
+        let lastVal = null;
+        
+        for(let item of history) {
+            if(isBigRoad && item === 'T') {
+                if (logicalCols.length === 0) { ties++; } 
+                else { logicalCols[logicalCols.length-1][logicalCols[logicalCols.length-1].length-1].ties += 1; }
                 continue;
             }
-            if (item !== lastColor) {
-                curCol = 0;
-                while (grid[curCol] && grid[curCol][0] !== undefined) curCol++;
-                curRow = 0;
+            if(lastVal === null || item !== lastVal) {
+                if(tempCol.length > 0) logicalCols.push(tempCol);
+                tempCol = [{val: item, ties: ties}];
+                ties = 0;
             } else {
-                if (curRow + 1 < 6 && (!grid[curCol] || grid[curCol][curRow + 1] === undefined)) curRow++;
-                else curCol++; 
+                tempCol.push({val: item, ties: ties});
+                ties = 0;
             }
-            if (!grid[curCol]) grid[curCol] = new Array(6);
-            grid[curCol][curRow] = { val: item, ties: tieCount };
-            tieCount = 0;
-            lastColor = item;
+            lastVal = item;
         }
-        if (isBigRoad && lastColor === null && tieCount > 0) {
-            if (!grid[0]) grid[0] = new Array(6);
-            grid[0][0] = { val: 'T', ties: tieCount };
+        if(tempCol.length > 0) logicalCols.push(tempCol);
+        
+        if (logicalCols.length === 0 && ties > 0) {
+             grid[0][0] = {val: 'T', ties: ties};
+             return grid;
+        }
+
+        for(let colIdx = 0; colIdx < logicalCols.length; colIdx++) {
+            let colData = logicalCols[colIdx];
+            let startCol = colIdx;
+            while(startCol < grid.length && grid[startCol][0] !== null) {
+                startCol++;
+            }
+            if (startCol >= grid.length) {
+                for(let i=0; i<10; i++) grid.push(new Array(6).fill(null)); 
+            }
+            
+            let c = startCol;
+            let r = 0;
+            for(let i=0; i<colData.length; i++) {
+                while (c >= grid.length) grid.push(new Array(6).fill(null));
+                grid[c][r] = colData[i];
+                if (i < colData.length - 1) {
+                    if (r + 1 < 6 && grid[c][r+1] === null) {
+                        r++;
+                    } else {
+                        c++; 
+                    }
+                }
+            }
         }
         return grid;
     }
@@ -430,30 +473,31 @@
         return { chops: directionChanges, isChoppy: (directionChanges / (recent15.length - 1)) >= 0.6 };
     }
 
-    function simulateIndependentTieProbability(history) {
-        if (history.length < 5) return { active: false, percent: 0, reason: "數據不足，無法執行和局預測", betAdvice: "等待數據", adviceClass: "low", tagClass: "tag-N" };
+    // ==========================================
+    // 歷史頻率估計與和局狙擊引擎 (基於信賴區間的真實推算)
+    // ==========================================
+    function calculateTieStatisticalEstimate(history) {
+        if (history.length < 5) return { active: false, percent: 0, reason: "數據不足，無法執行頻率估計", betAdvice: "等待數據", adviceClass: "low", tagClass: "tag-N" };
         
         let tieCount = history.filter(x => x === 'T').length;
-        let baseProb = tieCount / history.length;
-        let recent10 = history.slice(-10);
-        let recentTieCount = recent10.filter(x => x === 'T').length;
-        let recentProb = recentTieCount / 10;
+        let n = history.length;
         
-        let combinedProb = (baseProb * 0.4) + (recentProb * 0.6);
+        // 統計估算: Laplace smoothing (避免小樣本極端值)
+        let p = (tieCount + 1) / (n + 2); 
+        let standardError = Math.sqrt((p * (1 - p)) / n);
+        
+        let recent10 = history.slice(-10);
+        let recentTie = recent10.filter(x => x === 'T').length / recent10.length;
+        
+        let combinedProb = (p * 0.5) + (recentTie * 0.5);
         if (combinedProb < 0.05) combinedProb = 0.09;
         
-        let hits = 0;
-        const ITERS = 100000;
-        for(let i=0; i<ITERS; i++) {
-            let noise = (Math.random() - 0.5) * 0.06;
-            if (Math.random() < (combinedProb + noise)) hits++;
-        }
-        let finalPct = (hits / ITERS) * 100;
+        let finalPct = combinedProb * 100;
 
         let lastTieIndex = history.lastIndexOf('T');
         let handsSinceLastTie = lastTieIndex === -1 ? history.length : (history.length - 1 - lastTieIndex);
 
-        let reason = `AI 已模擬 10 萬局未來演進。依據本靴全局數據 (${tieCount}次和) 及近期波動，預測下一局出現「和局」機率為 ${finalPct.toFixed(1)}%。\n`;
+        let reason = `📊 【歷史頻率統計估計】\n本靴累積 ${n} 局，和局出現 ${tieCount} 次。\n經 Laplace 平滑修正及近端權重計算，當前和局發生概率估計為 ${finalPct.toFixed(1)}% (誤差 ±${(standardError*100).toFixed(1)}%)。\n`;
         let betAdvice = "";
         let adviceClass = "low";
         let tagClass = "tag-N";
@@ -472,7 +516,7 @@
             betAdvice = "🛑 嚴格觀望 (不打和)";
             adviceClass = "low";
             tagClass = "tag-N";
-            reason += `📉 目前和局機率偏低 (距離上次和局 ${handsSinceLastTie} 局)，和局賠率雖高但無優勢，建議保留資金。`;
+            reason += `📉 目前和局統計機率偏低 (距離上次和局 ${handsSinceLastTie} 局)，建議保留資金。`;
         }
 
         return { active: true, percent: finalPct.toFixed(1), reason: reason, betAdvice: betAdvice, adviceClass: adviceClass, tagClass: tagClass };
@@ -481,11 +525,10 @@
     // ==========================================
     // 核心邏輯重構：正向 vs 反向 權重對抗判定
     // ==========================================
-    function evaluateLogicWeights(curLen, jumpCount, completedDoubles, lastItem, oppItem) {
+    function evaluateLogicWeights(curLen, jumpCount, completedDoubles) {
         let normalWeight = 50, reverseWeight = 50;
         let normalReason = "", reverseReason = "";
         
-        // 大龍邏輯
         if (curLen >= 7) {
             reverseWeight += 45; normalWeight += 5;
             reverseReason = `【大龍極限反打】長連達極限 (長度${curLen})，破路反向權重極高。`;
@@ -494,7 +537,6 @@
             normalReason = `【長連順勢】目前連 ${curLen}，趨勢強勁，順打權重高。`;
         }
 
-        // 單跳邏輯
         if (jumpCount >= 6) {
             reverseWeight += 42; normalWeight += 5;
             reverseReason = `【長單跳極限反打】單跳已達 ${jumpCount} 次，變盤反向權重極高。`;
@@ -506,7 +548,6 @@
             normalReason = `【短單跳成形】規律成形 (${jumpCount} 次)，具備順勢權重。`;
         }
 
-        // 雙跳邏輯
         if (curLen === 1 && completedDoubles >= 4) {
             reverseWeight += 40; normalWeight += 10;
             reverseReason = `【長雙跳極限反打】雙跳達 ${completedDoubles} 次，預測變盤斷雙跳。`;
@@ -534,12 +575,6 @@
         let lastItem = sequence[sequence.length - 1];
         let oppItem = lastItem === 'B' ? 'P' : (lastItem === 'RED' ? 'BLUE' : (lastItem === 'P' ? 'B' : 'RED'));
         
-        let cName = (item) => {
-            if (item === 'B') return '莊'; if (item === 'P') return '閒';
-            if (item === 'RED') return '紅'; if (item === 'BLUE') return '藍';
-            return item;
-        };
-
         let jumpCount = 0;
         for(let i = numCols - 1; i >= 0; i--) {
             if(colLens[i] === 1) jumpCount++; else break;
@@ -555,11 +590,9 @@
             }
         }
 
-        // 取得動態對抗權重
-        let evalResult = evaluateLogicWeights(curLen, jumpCount, completedDoubles, lastItem, oppItem);
+        let evalResult = evaluateLogicWeights(curLen, jumpCount, completedDoubles);
         let target = 'NEUTRAL', reason = '未符常規強烈邏輯，建議觀望。', conf = 50;
 
-        // 房廳與對稱補齊 (靜態補充)
         let l1 = colLens[numCols - 1] || 0; let l2 = colLens[numCols - 2] || 0; let l3 = colLens[numCols - 3] || 0;
         let staticWeight = 0, staticTarget = 'NEUTRAL', staticReason = "";
         if (numCols >= 3 && l3===3 && l2===3 && l1===2) { staticTarget = lastItem; staticWeight = 85; staticReason = `【3-3-2 補齊】完美對稱成形，順打補齊第 3 粒。`; }
@@ -569,7 +602,6 @@
         else if (numCols >= 2 && l2===1 && l1===2) { staticTarget = oppItem; staticWeight = 80; staticReason = `【1房2廳】前單後雙規律，預測即將轉向 (反打)。`; }
         else if (numCols >= 2 && l2===2 && l1===1) { staticTarget = oppItem; staticWeight = 80; staticReason = `【2房1廳】前雙後單規律，預測跳向延續震盪。`; }
 
-        // 權重對抗決策機制
         let normW = evalResult.normalWeight;
         let revW = evalResult.reverseWeight;
 
@@ -578,9 +610,7 @@
         } else if (revW > normW && revW > 70) {
             target = oppItem; conf = Math.min(98, revW); reason = evalResult.reverseReason;
         } else if (normW > revW && normW > 70) {
-            // 順向邏輯
             target = (curLen === 1 && (completedDoubles >= 2 || jumpCount >= 3)) ? oppItem : lastItem;
-            // 處理雙跳換向的特例
             if (curLen === 2 && completedDoubles >= 1) target = oppItem;
             conf = Math.min(98, normW); reason = evalResult.normalReason;
         }
@@ -623,7 +653,9 @@
         br.weight = vol.isChoppy ? 0.8 : 1.2;
 
         function getLowerRoad(offset, name, defaultWeight) {
-            let seq = getDerivedRoadSequence(pure, offset);
+            let logicalCols = buildLogicalCols(pure);
+            let seq = getDerivedRoadSequence(logicalCols, offset);
+            
             if(seq.length < 3) return { name, target: 'NEUTRAL', confidence: 50, logicReason: '未成形', mechanismReason: '待命', weight: defaultWeight };
             
             let res = analyzeCoreWithMechanism(seq);
@@ -631,10 +663,15 @@
                 return { name, target: 'NEUTRAL', confidence: 50, logicReason: res.logicReason, mechanismReason: `【自我否決】爛路期間反向權重過高，強制退出。`, weight: 0 };
             }
             
-            let colorB = getDerivedRoadSequence(pure.concat(['B']), offset).pop();
-            let colorP = getDerivedRoadSequence(pure.concat(['P']), offset).pop();
-            let actualTarget = 'NEUTRAL';
+            let logicalColsB = buildLogicalCols(pure.concat(['B']));
+            let logicalColsP = buildLogicalCols(pure.concat(['P']));
+            let seqB = getDerivedRoadSequence(logicalColsB, offset);
+            let seqP = getDerivedRoadSequence(logicalColsP, offset);
             
+            let colorB = seqB.length > seq.length ? seqB[seqB.length-1] : null;
+            let colorP = seqP.length > seq.length ? seqP[seqP.length-1] : null;
+            
+            let actualTarget = 'NEUTRAL';
             if (colorB === res.target && colorP !== res.target) actualTarget = 'B';
             else if (colorP === res.target && colorB !== res.target) actualTarget = 'P';
             else if (colorB === res.target && colorP === res.target) { actualTarget = 'B'; res.confidence -= 5; }
@@ -671,7 +708,6 @@
         if (lowers.every(t => t === 'B')) { hasResonance = true; resTarget = 'B'; bScore += 80; valid++; }
         if (lowers.every(t => t === 'P')) { hasResonance = true; resTarget = 'P'; pScore += 80; valid++; }
 
-        // AI 和局隱性影響分析機制
         let tieInfluenceText = "";
         let bAfterTie = 0, pAfterTie = 0;
         for(let i = 0; i < history.length - 1; i++) {
@@ -732,7 +768,6 @@
         if (hasResonance && target === resTarget) conf = Math.max(92, conf);
         if (cores[0].confidence >= 95) conf = Math.max(90, conf);
         
-        // 訊號強弱轉換與注碼分配
         let winProb = Math.max(parseFloat(bProb), parseFloat(pProb));
         let signalStr = "弱訊號"; let signalClass = "sig-weak"; let sigBet = 1;
         
@@ -759,13 +794,10 @@
         document.getElementById("beadCountInfo").innerText = `總局數: ${baccaratHistory.length}/${MAX_HANDS} (有效: ${countB+countP}/5)`;
         
         let totalBets = 0, winCount = 0, lossCount = 0, skipCount = 0;
-        
-        // 雙軌策略追蹤
         let rawAiWins = 0, rawAiBets = 0, maxNormalWinRate = 0;
         let netSig = 0, netFib = 0;
-        let fibStep = 0; // 當前斐波那契階層
-        
-        // 用於最後一局渲染 UI 的臨時變數
+        let fibStep = 0; 
+
         let currentSigBetAdvice = 0;
         let currentFibBetAdvice = 0;
 
@@ -812,12 +844,9 @@
                             totalBets++;
                             let isWin = (finalTarget === res);
                             
-                            // 結算注碼
                             let betSigUnit = basePred.sigBet;
                             let betFibUnit = FIB_SEQ[Math.min(fibStep, FIB_SEQ.length - 1)];
 
-                            // 記錄最新一局要顯示的下注建議 (如果是歷史迴圈中的最後一步，這會是過期的，真正的下一局在迴圈外算)
-                            
                             let icon = document.createElement("span");
                             icon.className = "pred-icon";
                             
@@ -825,12 +854,12 @@
                                 icon.innerText = "✅"; winCount++; 
                                 netSig += betSigUnit;
                                 netFib += betFibUnit;
-                                fibStep = Math.max(0, fibStep - 2); // 贏退兩階
+                                fibStep = Math.max(0, fibStep - 2); 
                             } else { 
                                 icon.innerText = "❌"; lossCount++; 
                                 netSig -= betSigUnit;
                                 netFib -= betFibUnit;
-                                fibStep++; // 輸進一階
+                                fibStep++; 
                             }
                             badge.appendChild(icon);
                         }
@@ -841,14 +870,12 @@
         });
         hList.scrollLeft = hList.scrollWidth;
         
-        // 渲染獨立統計區
         document.getElementById("statWinRate").innerText = totalBets > 0 ? ((winCount/totalBets)*100).toFixed(1) + "%" : "0.0%";
         document.getElementById("statTotalBets").innerText = totalBets;
         document.getElementById("statWinCount").innerText = winCount;
         document.getElementById("statLossCount").innerText = lossCount;
         document.getElementById("statSkipCount").innerText = skipCount;
 
-        // 頂部實時雙軌盈虧
         let elTopSig = document.getElementById("topNetSignal");
         let elTopFib = document.getElementById("topNetFib");
         elTopSig.innerText = (netSig > 0 ? "+" : "") + netSig + " 單位";
@@ -893,22 +920,26 @@
             container.scrollLeft = container.scrollWidth;
         }
 
+        // 修改: 使用 buildTrueMatrix() 產生大路的二維陣列（考慮龍尾）後，直接將它轉為下三路生成的參考陣列
         let pure = baccaratHistory.filter(x => x !== 'T');
         renderTrueMatrixDOM("roadBigRoad", buildTrueMatrix(baccaratHistory, true), true);
-        renderTrueMatrixDOM("roadBigEye", buildTrueMatrix(getDerivedRoadSequence(pure, 1), false), false);
-        renderTrueMatrixDOM("roadSmall", buildTrueMatrix(getDerivedRoadSequence(pure, 2), false), false);
-        renderTrueMatrixDOM("roadCockroach", buildTrueMatrix(getDerivedRoadSequence(pure, 3), false), false);
+        
+        let logicalColsForDerived = buildLogicalCols(pure);
+        
+        renderTrueMatrixDOM("roadBigEye", buildTrueMatrix(getDerivedRoadSequence(logicalColsForDerived, 1), false), false);
+        renderTrueMatrixDOM("roadSmall", buildTrueMatrix(getDerivedRoadSequence(logicalColsForDerived, 2), false), false);
+        renderTrueMatrixDOM("roadCockroach", buildTrueMatrix(getDerivedRoadSequence(logicalColsForDerived, 3), false), false);
         
         let grid = document.getElementById("analysisGrid");
         grid.innerHTML = "";
         
-        let tieSim = simulateIndependentTieProbability(baccaratHistory);
+        let tieSim = calculateTieStatisticalEstimate(baccaratHistory);
         if(baccaratHistory.length >= 5) {
             grid.innerHTML += `
             <div class="analysis-card tie-card">
-                <div class="card-header"><span class="card-title">🎲 10萬局和局狙擊模擬引擎</span>
+                <div class="card-header"><span class="card-title">🎲 歷史頻率估計與和局狙擊引擎</span>
                 <div class="card-meta">
-                    <span class="card-conf" style="color:var(--tie-color); background:rgba(34,197,94,0.1)">發生率 ${tieSim.percent}%</span>
+                    <span class="card-conf" style="color:var(--tie-color); background:rgba(34,197,94,0.1)">發生率估計 ${tieSim.percent}%</span>
                     <span class="card-target ${tieSim.tagClass}">和 (T) 預測</span>
                 </div></div>
                 <div class="section-box"><div class="section-title">🎯 狙擊建議</div><div class="tie-advice ${tieSim.adviceClass}">${tieSim.betAdvice}</div></div>
@@ -933,7 +964,6 @@
         coreHTML += `</div>`;
         grid.innerHTML += coreHTML;
 
-        // 計算最新一局預測
         let baseF = getFinalPredictionDetails(baccaratHistory);
         let f = { ...baseF };
 
@@ -979,7 +1009,6 @@
         let pbContainer = document.getElementById("probBarContainer"), pbB = document.getElementById("probBarB"), pbP = document.getElementById("probBarP");
         let sigIndicator = document.getElementById("signalIndicator");
         
-        // 獨立下注面板綁定
         let elBetSig = document.getElementById("betAdviceSignal");
         let elBetFib = document.getElementById("betAdviceFib");
 
@@ -1007,9 +1036,9 @@
             ft.innerText = f.target === 'B' ? "莊 (B)" : "閒 (P)";
             ft.className = `final-target target-${f.target}`;
             
+            sigIndicator.style.display = "inline-block";
             fp.innerHTML = `<span>可信度 ${f.confidence}%</span> <span id="signalIndicator" class="signal-indicator ${f.signalClass}">${f.signalStr}</span>`;
             
-            // 更新獨立下注面板
             currentFibBetAdvice = FIB_SEQ[Math.min(fibStep, FIB_SEQ.length - 1)];
             elBetSig.innerText = `${f.sigBet} 單位`; elBetSig.className = "bet-strat-unit";
             elBetFib.innerText = `${currentFibBetAdvice} 單位`; elBetFib.className = "bet-strat-unit";
